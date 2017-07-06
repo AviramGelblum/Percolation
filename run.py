@@ -23,8 +23,9 @@ class Runner:
         self.max_steps = max_steps  # maximum number of steps in the simulation
         self.seed = misc.init_rand(seed)  # returns random seed if seed is not defined, seed the RNG
 
-    # def step(self):
-    #     return P(0, 0), True
+    def step(self):
+        """Dummy method, must be overridden by subclasses."""
+        return P(0, 0), True
 
     def restart(self):
         """Re-generate random seed (if needed) as part of restart procedure."""
@@ -50,9 +51,10 @@ class AntRunner(Runner):
         self.index = index  # Defined initial point in trajectory
 
     def step(self):
-        cheerio = self.cfg.path.points[self.index]
+        """Get next load location"""
+        cheerio = self.cfg.path.points[self.index]  # Return current load location. cheerio - tuple
         self.index += 1
-        if self.index >= len(self.cfg.path.points):
+        if self.index >= len(self.cfg.path.points):  # finished trajectory or not
             return cheerio, True
         else:
             return cheerio, False
@@ -62,6 +64,12 @@ class AntRunner(Runner):
 
 
 class DeterministicRunner(Runner):
+    """
+    Simulation with the following rules:
+    1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
+    for as long as possible.
+    2)When blocked -
+    """
     def __init__(self, cfg: Configuration, max_steps=10000):
         super().__init__(cfg, max_steps)
         self.speed = self.cfg.cheerio_radius * 0.05

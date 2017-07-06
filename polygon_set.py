@@ -1,4 +1,4 @@
-from misc import *
+import misc
 from point import P
 from polygon import Polygon
 from region import Region
@@ -7,6 +7,7 @@ from circle import Circle
 from segment import S
 from circle_set import CircleSet
 from rectangle import Rectangle
+import numpy as np
 
 
 class PolygonSet:
@@ -41,7 +42,7 @@ class PolygonSet:
 
     def random_squares(self, num, size):
         while len(self.polys) < num:
-            self.add(Polygon.square(P(misc.rand(), misc.rand()), size, rand() * np.pi / 2))
+            self.add(Polygon.square(P(misc.rand(), misc.rand()), size, misc.rand() * np.pi / 2))
 
     def contains(self, p):
         return any(poly.contains(p) for poly in self.polys)
