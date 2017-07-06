@@ -1,0 +1,149 @@
+from misc import *
+
+
+#############################################################
+# Points
+
+
+class P:
+
+    def __init__(self, x=None, y=None):
+        self.x = x
+        self.y = y
+
+    @classmethod
+    def A(cls, p):
+        return cls(p[0], p[1])
+
+    def copy(self):
+        return P(self.x, self.y)
+
+    @classmethod
+    def random(cls):
+        return cls(rand(), rand())
+
+    @classmethod
+    def polar(cls, size, angle):
+        return cls(size * np.cos(angle), size * np.sin(angle))
+
+    def __add__(self, other):
+        return P(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return P(self.x - other.x, self.y - other.y)
+
+    def __neg__(self):
+        return P(-self.x, -self.y)
+
+    def __mul__(self,other):
+        try:
+            return self.x * other.x + self.y * other.y
+        except: # for the case where other is a constant
+            return P(other * self.x, other * self.y)
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def to_tuple(self):
+        return self.x, self.y
+
+    @classmethod
+    @remember
+    def zero(cls):
+        return P(0, 0)
+
+    @remember
+    def perp(self):
+        return P(-self.y, self.x)
+
+    def is_parallel(self, other):
+        return self * other.perp() == 0
+
+    def __repr__(self):
+        #return '({:.0f},{:.0f})'.format(self.x * 1000,self.y * 1000)
+        return '({},{})'.format(self.x, self.y)
+
+    def to_grid(self, granularity):
+        return P(math.floor(self.x / granularity), math.floor(self.y/granularity))
+
+    @remember
+    def norm(self):
+        return np.sqrt(self * self)
+
+    def dist(self, other):
+        return np.sqrt(self.dist_squared(other))
+
+    def dist_squared(self, other):
+        return (self.x - other.x) ** 2 + (self.y - other.y) ** 2
+
+    # returns a new vector with the new size.
+    def resize(self, size):
+        norm = self.norm()
+        if norm == size:
+            return self.copy()
+        if norm == 0:
+            return P(0, 0)
+        return P(self.x * (size/norm), self.y * (size/norm))
+
+    @remember
+    def angle(self):
+        if self.y == 0:
+            if self.x > 0:
+                return 0
+            else:
+                return -np.pi
+        return np.arctan2(self.y, self.x)
+
+    @remember
+    def angle_degrees(self):
+        return np.rad2deg(self.angle())
+
+    def angle_with(self, other):
+        ang1 = self.angle()
+        ang2 = other.angle()
+        if ang2 >= ang1:
+            return ang2 - ang1
+        return 2 * np.pi + ang2 - ang1
+
+    def cos(self, other):
+        return self * other / (other.norm() * self.norm())
+
+    # will return something that behaves like the counter-clockwise angle.
+    # Just faster to calculate. It ranges from 0 to 4.
+    def alt_angle(self, other):
+        if self == other:
+            return 0
+        if self.perp() * other > 0:
+            return 1 - self.cos(other)
+        else:
+            val = 3 + self.cos(other)
+            return val
+
+    def rotate(self, angle):
+        return P.polar(self.norm(), self.angle() + angle)
+
+    @staticmethod
+    # Solves the equation a*p1 + b*p2 = q
+    def solve(p1, p2, q):
+        if p1.is_parallel(p2):
+            return None, None
+        if abs(p1.x) > abs(p1.y): # this has to do with accuracy
+            b = (q.y*p1.x - q.x*p1.y) / (p2.y*p1.x - p2.x*p1.y)
+            a = (q.x - b*p2.x) / p1.x
+        else:
+            b = (q.x * p1.y - q.y * p1.x) / (p2.x * p1.y - p2.y * p1.x)
+            a = (q.y - b * p2.y) / p1.y
+        return a, b
+
+    def closest_point(self, points):
+        return most(points, lambda x: -self.dist(x))[0]
+
+    def furthest_point(self, points):
+        return most(points, lambda x: self.dist(x))[0]
+
+    def draw(self, ax, color, radius=0.001):
+        c = patches.Circle((self.x, self.y), radius, lw=0, fc=color)
+        ax.add_patch(c)
+        return [c]
+
+
