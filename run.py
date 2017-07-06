@@ -66,10 +66,14 @@ class AntRunner(Runner):
 class DeterministicRunner(Runner):
     """
     Simulation with the following rules:
+
     1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
     for as long as possible.
-    2)When blocked -
+
+    2)When blocked - aligns its movement with the directin as close as possible to the direction
+    of the nest.
     """
+
     def __init__(self, cfg: Configuration, max_steps=10000):
         super().__init__(cfg, max_steps)
         self.speed = self.cfg.cheerio_radius * 0.05
@@ -78,19 +82,25 @@ class DeterministicRunner(Runner):
         self.last = False
 
     def restart(self):
+        """Resets the runner to the first location with given/random seed.
+        """
         super().restart()
         self.cheerio = self.cfg.start
         self.v = P(0, 0)
 
     def step(self):
-        cfg = self.cfg
+        """Get next load location
+        """
+        cfg = self.cfg  # cube maze configuration - Configuration Class
         cheerio = self.cheerio
 
         # Where can we currently go
         allowable = cfg.stones.open_direction_for_circle(cheerio, cfg.cheerio_radius, self.speed)
-        if allowable.is_empty():
-            for stone in cfg.stones:
+        if allowable.is_empty():  # can't go anywhere. This is a bug if happens.
+            for stone in cfg.stones:  # cfg.stones - PolygonSet class, stone - Polygon class with
+                                        #  points property which is a list of points (Point class)
                 if stone.center().dist(cheerio) < cfg.cheerio_radius + cfg.stone_size:
+                                        # cheerio is inside cube - print data in console
                     print("stone=Polygon([")
                     for p in stone.points:
                         print("aff(", p.x, ", ", p.y, "),")
@@ -102,8 +112,12 @@ class DeterministicRunner(Runner):
 
         # Update speed
         v = self.v
+        # v = v+1/5*v_nest and then resize to set speed - change in v is not abrupt, but rather
+        # updates slowly
         v += (cfg.nest - cheerio).resize(self.speed / 5)
         v = v.resize(self.speed)
+
+        # if direction of resulting v is not allowed, pick the closest possible
         if not allowable.contains(v):
             v = allowable.align_with_closest_side(v)
         self.v = v
@@ -125,7 +139,6 @@ class DeterministicRunner(Runner):
         #                       "radius=", cfg.cheerio_radius,
         #                       "step=", self.speed)
         #
-
 
         return self.cheerio, False
 

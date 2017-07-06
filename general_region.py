@@ -1,17 +1,23 @@
-from misc import *
+"""
+General Region - holds a union of regions, starts as the whole space and
+is slowly intersected."""
+
+import misc
+import scipy.stats as sct
+import math
+import numpy as np
 from point import P
 from segment import S
 from circle import Circle
 from region import Region
 
-################################################################################
-# General Region - holds a union of regions, starts as the whole space and
-# is slowly intersected.
 
 class GRegion:
+
     def __init__(self, center=P(0, 0), size=0.5):
-        self.regions = []
-        self.full = True
+        self.regions = []  # list of region objects
+        self.full = True   # This property is used to differentiate everything allowed (True) from
+        # nothing allowed (False)
         self.center = center
         self.size = size
 
@@ -19,17 +25,20 @@ class GRegion:
         return not self.full and not self.regions
 
     def width(self):
+        """Compute total angle of all regions"""
         total = 0
         for r in self.regions:
             total += r.angle()
         return total
 
     def contains(self, v):
+        """Determine whether direction v is contained within the GRegion angle set"""
         if self.full:
             return True
         return any(r.contains(v) for r in self.regions)
 
     def intersect_with(self, region: Region):
+        """Intersect the Region set in the GRegion object with another Region"""
         if self.full:
             self.full = False
             self.regions = [region]
@@ -37,26 +46,34 @@ class GRegion:
             res = []
             for r in self.regions:
                 res.extend(r.intersect(region))
-            self.regions = res
+            self.regions = res  # list of Regions
 
     def intersect(self, other):
+        """Intersect the GRegion object with another GRegion object."""
         if other.full:
             return
         for r in other.regions:
             self.intersect_with(r)
 
     def align_with_closest_side(self, v):
+        """
+        Find closest angle in GRegion object to the direction of v (Point object - defines a
+        vector).
+        """
         if self.full:
             return v
         if not self.regions:
             return P.zero()
-        sides = [p for r in self.regions for p in r]
+        sides = [p for r in self.regions for p in r]  # List of points describing all angular
+        # edges of regions in GRegion
         cos = [side.cos(v) for side in sides]
         maxcos = max(cos)
-        closest = sides[cos.index(maxcos)]
-        return closest.resize(v.norm())
+        closest = sides[cos.index(maxcos)]  # take the maximal cosine between the velocity
+        # direction and the region edges - that is the closest edge.
+        return closest.resize(v.norm())  # resize to speed magnitude (returns velocity direction)
 
     def draw(self, ax, color="black"):
+        # Draw all Regions in black
         res = []
         if not self.full:
             for r in self.regions:
@@ -70,11 +87,10 @@ class GRegion:
         res += ">"
         return res
 
-
     def rand_point(self, size):
         if self.full:
-            return P(rand()-0.5, rand()-0.5).resize(size)
-        t = rand() * self.width()
+            return P(misc.rand()-0.5, misc.rand()-0.5).resize(size)
+        t = misc.rand() * self.width()
         total = 0
         for r in self.regions:
             total += r.angle()
@@ -89,7 +105,7 @@ class GRegion:
         def cdf(x):
             return sct.norm.cdf(x, scale=sigma)
 
-        def ppf(x): # the inverse
+        def ppf(x):  # the inverse
             return sct.norm.ppf(x, scale=sigma)
 
         intervals = []
@@ -108,7 +124,7 @@ class GRegion:
         total = 0
         for x, y in intervals:
             total += y - x
-        t = rand() * total
+        t = misc.rand() * total
         for x, y in intervals:
             if t <= y - x:
                 angle = ppf(x+t)
@@ -155,15 +171,19 @@ class GRegion:
 
     @staticmethod
     def open_directions_for_circle_avoiding_segment(circ: Circle, seg: S, step):
+        """
+        Find which motion directions are allowed for a circle (simulating load) which is near
+        a segment (an edge of a cube).
+        """
         center = circ.center
         radius = circ.radius
         closest, dist = seg.closest_point(center)
-        open = GRegion(center=center)
+        open_region = GRegion(center=center)
 
         if dist <= radius:
-            dir = center - closest
-            r = Region(-dir.perp(), dir.perp())
-            open.intersect_with(r)
+            direction = center - closest
+            r = Region(-direction.perp(), direction.perp())
+            open_region.intersect_with(r)
         else:
             shift = seg.dir.perp().resize(radius)
             for sign in -1, 1:
@@ -179,13 +199,13 @@ class GRegion:
                         r = Region(v2, v1)
                     else:
                         r = Region(v1, v2)
-                    open.intersect_with(r)
+                    open_region.intersect_with(r)
 
             for p in seg:
                 r = GRegion.open_directions_for_circle_avoiding_point(circ, p, step)
                 if r:
                     pass
-                    open.intersect_with(r)
+                    open_region.intersect_with(r)
 
-        return open
+        return open_region
 
