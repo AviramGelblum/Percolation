@@ -22,10 +22,10 @@ def init_rand(seed=None):
 
 def rand():
     return np.random.random()
-
-
 all_colors = ["silver", "yellow", "orange", "violet", "beige", "brown", "cadetblue", "blue"]
 color_num = 0
+
+
 def random_color():
     global color_num
     color_num += 1
@@ -33,15 +33,26 @@ def random_color():
     return all_colors[color_num]
 
 
-
-# A decorator to make an argument-less method run only once and remember the
-# result so that it will not run again.
 def remember(func):
-    cache = "cache" + func.__name__
+    """
+    A decorator to make an argument-less method run only once and remember the
+    result so that it will not run again. Efficiency improvement trick.
+    """
+    cache = "cache" + func.__name__  # cache the name of the function to be remembered by the
+    # resulting object.
+
     def new_func(s):
+        """
+        New function returned by the remember decorator, s is the object on which the
+        remember-decorated method is called.
+        """
         try:
+            # returns cached value in s.cache+func.__name__. If it does not exist throws an
+            # AttributeError
             return getattr(s, cache)
         except AttributeError:
+            # Computes the value for the given object with the original method function,
+            # setting s.cache+func.__name__ to this value, and returns said value.
             setattr(s, cache, func(s))
             return getattr(s, cache)
     return new_func

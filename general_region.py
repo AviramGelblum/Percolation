@@ -181,10 +181,13 @@ class GRegion:
         open_region = GRegion(center=center)
 
         if dist <= radius:
-            direction = center - closest
-            r = Region(-direction.perp(), direction.perp())
+            # segment is inside load radius
+            direction = center - closest  # away from obstacle
+            r = Region(-direction.perp(), direction.perp())  # half plane perpendicular to
+            # direction  - defines allowed open region for further motion
             open_region.intersect_with(r)
         else:
+            # segment is outside load radius
             shift = seg.dir.perp().resize(radius)
             for sign in -1, 1:
                 seg2 = S(seg.q + shift * sign, seg.p + shift * sign)

@@ -56,8 +56,8 @@ class S:
         a, b = self.intersection_params(other)
         return self.p + self.dir * a
 
-    # returns the point on the segment that is closest to p, and the distance to it.
     def closest_point(self, p):
+        """Return the point on the segment that is closest to p, and the distance to it"""
         a, b = P.solve(self.dir, self.dir.perp(), p - self.p)
         if 0 < a < 1:
             return self.p + self.dir * a, self.dir.norm() * abs(b)

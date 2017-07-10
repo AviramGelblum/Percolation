@@ -54,6 +54,7 @@ class P:
 
     @remember
     def perp(self):
+        """Compute anticlockwise perpendicular vector."""
         return P(-self.y, self.x)
 
     def is_parallel(self, other):
