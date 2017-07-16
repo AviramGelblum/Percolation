@@ -140,18 +140,24 @@ class GRegion:
         center = circ.center
         a = center.dist(p)
         if a > step + radius:
-            return None
+            # Case where the motion is fully allowed.
+            return Region()
         if a < radius:
-            dir = center - p
-            return Region(-dir.perp(), dir.perp())
-            x = (radius ** 2 - step ** 2 - a ** 2) / (2 * a)
-            if x < 0:
-                print("wow")
-                return None
-            y = np.sqrt(step ** 2 - x ** 2)
-            dir = (center - p).resize(a + x)
-            perp = dir.perp().resize(y)
-            return Region(dir - perp - p, dir + perp - p)
+            # Case where the point is already within the load radius...
+            direction = center - p  # away from point
+            return Region(-direction.perp(), direction.perp())  # half plane perpendicular to
+            # direction  - defines allowed open region for further motion
+
+
+            
+            # x = (radius ** 2 - step ** 2 - a ** 2) / (2 * a)
+            # if x < 0:
+            #     print("wow")
+            #     return None
+            # y = np.sqrt(step ** 2 - x ** 2)
+            # direction = (center - p).resize(a + x)
+            # perp = direction.perp().resize(y)
+            # return Region(direction - perp - p, direction + perp - p)
 
         # first find the optimal
         d = np.sqrt(a ** 2 - radius ** 2)
@@ -162,11 +168,11 @@ class GRegion:
         # now solve: x+y = a, y^2 - x^2 = b
         x = (a ** 2 - b) / (2 * a)
         if x >= step:
-            return None
+            return
         h = np.sqrt(step ** 2 - x ** 2)
-        dir = (p - center).resize(x)
-        left = dir + dir.perp().resize(h)
-        right = dir - dir.perp().resize(h)
+        direction = (p - center).resize(x)
+        left = direction + direction.perp().resize(h)
+        right = direction - direction.perp().resize(h)
         return Region(left, right)
 
     @staticmethod
@@ -187,22 +193,32 @@ class GRegion:
             # direction  - defines allowed open region for further motion
             open_region.intersect_with(r)
         else:
-            # segment is outside load radius
-            shift = seg.dir.perp().resize(radius)
+            # segment is outside load radius - we want to check if there can be an intersection
+            # between load and the cube segment if the load moves with speed "step" towards the
+            # segment, and restrict possible direction of motions accordingly.
+            shift = seg.dir.perp().resize(radius)  # Shift in the direction toward the segment
             for sign in -1, 1:
+                # Check for which shift there is an intersection with the load
                 seg2 = S(seg.q + shift * sign, seg.p + shift * sign)
-                cut = seg2.intersect_with_circle(center, step)
+                cut = seg2.intersect_with_circle(center, step)  # Returns intersected segment if
+                # one exists
                 if cut:
                     v1, v2 = cut.p - center, cut.q - center
                     x = v1.alt_angle(v2)
                     # This is a little strange but needed....
                     if x < 0.00000000001 or x > 3.9999999999:
+                        # case where the cut segment is almost a point within the load,
+                        # accept this inaccuracy and move on (?), allow motion
                         continue
+                    # Determine if open region is from v2 to v1 or the other way. Regions are
+                    # defined from the first argument to the second argument counterclockwise.
                     if x <= 2:
-                        r = Region(v2, v1)
+                        r = Region(v2, v1)  # r is the allowed open region. v2 is further
+                        # counterclockwise compared to v1
                     else:
-                        r = Region(v1, v2)
-                    open_region.intersect_with(r)
+                        r = Region(v1, v2)  # r is the allowed open region. v1 is further
+                        # counterclockwise compared to v2
+                    open_region.intersect_with(r)  # add to original fully open GRegion
 
             for p in seg:
                 r = GRegion.open_directions_for_circle_avoiding_point(circ, p, step)

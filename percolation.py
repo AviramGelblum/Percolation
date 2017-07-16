@@ -13,6 +13,7 @@ from run import *
 from plots import Plots
 
 
+
 def run_movie(cfg: Configuration, runner: Runner, only_plot=False, only_save=False):
     """Create the video."""
     movie = Movie()
@@ -367,6 +368,7 @@ f4 = "1110006"
 f5 = "1110004"
 f10 = "1350003"
 f11 = "1400008"
+
 
 # Difficult f10 f2 f1
 #check_open_directions_for_circle_avoiding_segment()
