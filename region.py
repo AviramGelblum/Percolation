@@ -6,10 +6,21 @@ from segment import S
 # Describes the region between two rays.
 # second one is counter-clockwise from the first
 
+
 class Region:
-    def __init__(self, p1, p2):
-        self.p1 = p1.copy()
-        self.p2 = p2.copy()
+    def __init__(self, p1=None, p2=None):
+        try:
+            self.p1 = p1.copy()
+            self.p2 = p2.copy()
+        except AttributeError:
+            self.p1 = None
+            self.p2 = None
+
+    def __bool__(self):
+        if not self.p1:
+            return False
+        else:
+            return True
 
     def __iter__(self):
         yield self.p1
