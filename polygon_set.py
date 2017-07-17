@@ -48,24 +48,40 @@ class PolygonSet:
         return any(poly.contains(p) for poly in self.polys)
 
     def _relevant_segments(self, point, dist):
-        box = Rectangle.bounding_circle(Circle(point, dist))
-        for poly in self.polys:
-            if poly.bounding.intersects(box):
-                for s in poly.segments:
-                    # note that the polygon itself is always on the counter-clockwise direction of s.dir
-                    # We have to only consider this side.
-                    #if  s.dir.alt_angle(point - s.p) >= 2:
+        """
+        Find which of all possible cube segments are relevant (increases efficiency
+        dramatically).
+        """
+        box = Rectangle.bounding_circle(Circle(point, dist))  # Calculate the rectangle bounding
+        # the circle (supposed to be called with dist=load_radius+step)
+
+        # iterate over all cubes (polys in the configuration polygon_set)
+        for poly in self:
+            if poly.bounding.intersects(box):  # if rectangle bounding the cube (poly) intersects
+                # with the rectangle bounding the load (circle) -> yield all of its segments
+
+                for s in poly.segments:  # poly.segments - list
                     yield s
 
-    # a circle wanting to take a step
+                    # note that the polygon itself is always on the counter-clockwise direction
+                    # of s.dir We have to only consider this side. if  s.dir.alt_angle(point -
+                    # s.p) >= 2:  # this was taken out because it is not that important in terms
+                    # of efficiency
+
     def open_direction_for_circle(self, center, radius, step):
-        allowable = GRegion(center=center)
+        """
+        Given the stone configuration within the polygon_set object, calculate the allowed
+        directions of motion for the next step of the load.
+        """
+        allowable = GRegion(center=center)  # empty general region
         for s in self._relevant_segments(center, radius + step):
+            # iterate over all segments which have a chance to be close enough to the load so as
+            # to pose a possible obstacle within the next step. Find the allowed motion given
+            # each segment (and intersect all)
             allowable.intersect(
                 GRegion.open_directions_for_circle_avoiding_segment(
                     Circle(center, radius), s, step))
         return allowable
-
 
     def box_density(self, radius, box: Rectangle):
         bigger_box = Rectangle(box.px - radius, box.py - radius, box.qx + radius, box.qy + radius)

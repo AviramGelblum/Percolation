@@ -136,6 +136,12 @@ class GRegion:
 
     @staticmethod
     def open_directions_for_circle_avoiding_point(circ: Circle, p: P, step) -> Region:
+        """
+        Handle the case where the load is near the edge of the segment. In this case the
+        parent method (open_directions_for_avoiding_segment) does not compute the correct
+        allowable region.
+        """
+
         radius = circ.radius
         center = circ.center
         a = center.dist(p)
@@ -143,13 +149,11 @@ class GRegion:
             # Case where the motion is fully allowed.
             return Region()
         if a < radius:
-            # Case where the point is already within the load radius...
+            # Case where the point is already within the load radius. i.e. numerical error or bug
             direction = center - p  # away from point
             return Region(-direction.perp(), direction.perp())  # half plane perpendicular to
             # direction  - defines allowed open region for further motion
 
-
-            
             # x = (radius ** 2 - step ** 2 - a ** 2) / (2 * a)
             # if x < 0:
             #     print("wow")
@@ -159,16 +163,25 @@ class GRegion:
             # perp = direction.perp().resize(y)
             # return Region(direction - perp - p, direction + perp - p)
 
-        # first find the optimal
+        # if a>radius and a<radius+step
+        # first find the maximal step size for which the region limit grows.
+        # Above this step size, the limit in the open direction stays the same as the load just
+        # slides next to the edge.
         d = np.sqrt(a ** 2 - radius ** 2)
         if d < step:
             step = d
 
+
+        # Using the perpendicular of the triangle connecting a, the radius and the line of size
+        # step connecting the circle to the edge, we cut a into two parts x and y such that
+        # r^2-y^2=step^2-x^2 -> b=r^2-step^2=y^2-x^2
+        # We then use this equation as well as a=x+y
+        # to get the size of the final vector in the direction of a (x) and its size in the
+        # perpendicular direction (h) as a function of the known quantities (radius,step and a).
         b = radius ** 2 - step ** 2
-        # now solve: x+y = a, y^2 - x^2 = b
         x = (a ** 2 - b) / (2 * a)
         if x >= step:
-            return
+            return Region()
         h = np.sqrt(step ** 2 - x ** 2)
         direction = (p - center).resize(x)
         left = direction + direction.perp().resize(h)
@@ -200,8 +213,9 @@ class GRegion:
             for sign in -1, 1:
                 # Check for which shift there is an intersection with the load
                 seg2 = S(seg.q + shift * sign, seg.p + shift * sign)
-                cut = seg2.intersect_with_circle(center, step)  # Returns intersected segment if
-                # one exists
+                cut = seg2.intersect_with_circle(center, step)  # Returns intersected segment
+                # with a circle of radius step if one exists, to determine the maximal angle the
+                # load can move without encroaching on the segment.
                 if cut:
                     v1, v2 = cut.p - center, cut.q - center
                     x = v1.alt_angle(v2)
@@ -221,9 +235,11 @@ class GRegion:
                     open_region.intersect_with(r)  # add to original fully open GRegion
 
             for p in seg:
+                # Making sure the load avoids the endpoints of the segment (segment avoidance
+                # calculation does not hold, another method is needed).
                 r = GRegion.open_directions_for_circle_avoiding_point(circ, p, step)
                 if r:
-                    pass
+                    # pass
                     open_region.intersect_with(r)
 
         return open_region
