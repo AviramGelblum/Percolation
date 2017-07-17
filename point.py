@@ -124,8 +124,12 @@ class P:
         return P.polar(self.norm(), self.angle() + angle)
 
     @staticmethod
-    # Solves the equation a*p1 + b*p2 = q
     def solve(p1, p2, q):
+        """
+        Solve the equation a*p1 + b*p2 = q. Returns the coefficients a and b for the vectors
+        p1 and p2, so that q is decomposed in the p1 and p2 basis with these coefficients for the
+        basis vectors.
+        """
         if p1.is_parallel(p2):
             return None, None
         if abs(p1.x) > abs(p1.y): # this has to do with accuracy
