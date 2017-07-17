@@ -1,6 +1,7 @@
-from misc import *
-
-
+import misc
+import math
+import numpy as np
+import matplotlib.patches
 #############################################################
 # Points
 
@@ -20,7 +21,7 @@ class P:
 
     @classmethod
     def random(cls):
-        return cls(rand(), rand())
+        return cls(misc.rand(), misc.rand())
 
     @classmethod
     def polar(cls, size, angle):
@@ -48,11 +49,11 @@ class P:
         return self.x, self.y
 
     @classmethod
-    @remember
+    @misc.remember
     def zero(cls):
         return P(0, 0)
 
-    @remember
+    @misc.remember
     def perp(self):
         """Compute anticlockwise perpendicular vector."""
         return P(-self.y, self.x)
@@ -67,7 +68,7 @@ class P:
     def to_grid(self, granularity):
         return P(math.floor(self.x / granularity), math.floor(self.y/granularity))
 
-    @remember
+    @misc.remember
     def norm(self):
         return np.sqrt(self * self)
 
@@ -86,7 +87,7 @@ class P:
             return P(0, 0)
         return P(self.x * (size/norm), self.y * (size/norm))
 
-    @remember
+    @misc.remember
     def angle(self):
         if self.y == 0:
             if self.x > 0:
@@ -95,7 +96,7 @@ class P:
                 return -np.pi
         return np.arctan2(self.y, self.x)
 
-    @remember
+    @misc.remember
     def angle_degrees(self):
         return np.rad2deg(self.angle())
 
@@ -132,7 +133,7 @@ class P:
         """
         if p1.is_parallel(p2):
             return None, None
-        if abs(p1.x) > abs(p1.y): # this has to do with accuracy
+        if abs(p1.x) > abs(p1.y):  # this has to do with accuracy
             b = (q.y*p1.x - q.x*p1.y) / (p2.y*p1.x - p2.x*p1.y)
             a = (q.x - b*p2.x) / p1.x
         else:
@@ -141,13 +142,13 @@ class P:
         return a, b
 
     def closest_point(self, points):
-        return most(points, lambda x: -self.dist(x))[0]
+        return misc.most(points, lambda x: -self.dist(x))[0]
 
     def furthest_point(self, points):
-        return most(points, lambda x: self.dist(x))[0]
+        return misc.most(points, lambda x: self.dist(x))[0]
 
     def draw(self, ax, color, radius=0.001):
-        c = patches.Circle((self.x, self.y), radius, lw=0, fc=color)
+        c = matplotlib.patches.Circle((self.x, self.y), radius, lw=0, fc=color)
         ax.add_patch(c)
         return [c]
 
