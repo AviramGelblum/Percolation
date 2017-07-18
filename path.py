@@ -31,7 +31,7 @@ class MotionPath:
     def random_step(self, stones: PolygonSet, step_size: float, bias: P):
         last = self.last()
         directions = stones.open_directions_for_point(last, step_size)
-        if directions.is_empty():
+        if not directions:
             print("walk stuck")
             exit(1)
         if rand() < 0.5:

@@ -17,10 +17,7 @@ class Region:
             self.p2 = None
 
     def __bool__(self):
-        if not self.p1:
-            return False
-        else:
-            return True
+        return not not self.p1
 
     def __iter__(self):
         yield self.p1

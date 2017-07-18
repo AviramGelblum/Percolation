@@ -3,13 +3,12 @@ Performs running of simulation/analysis method. Different simulation/analysis ty
 defined as different classes herein.
 """
 
-# from misc import *
+
 import misc
 from point import P
 from general_region import GRegion
 from configuration import Configuration
 from rectangle import Rectangle
-from polygon_set import PolygonSet
 
 
 class Runner:
@@ -70,16 +69,16 @@ class DeterministicRunner(Runner):
     1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
     for as long as possible.
 
-    2)When blocked - aligns its movement with the directin as close as possible to the direction
+    2)When blocked - aligns its movement with the direction as close as possible to the direction
     of the nest.
     """
 
     def __init__(self, cfg: Configuration, max_steps=10000):
         super().__init__(cfg, max_steps)
-        self.speed = self.cfg.cheerio_radius * 0.05
-        self.cheerio = self.cfg.start
+        self.speed = self.cfg.cheerio_radius * 0.05  # step size
+        self.cheerio = self.cfg.start  # class P
         self.v = P(0, 0)
-        self.last = False
+        self.last = False  # ?
 
     def restart(self):
         """Resets the runner to the first location with given/random seed.
@@ -96,7 +95,7 @@ class DeterministicRunner(Runner):
 
         # Where can we currently go
         allowable = cfg.stones.open_direction_for_circle(cheerio, cfg.cheerio_radius, self.speed)
-        if allowable.is_empty():  # can't go anywhere. This is a bug if happens.
+        if not allowable:  # can't go anywhere. This is a bug if happens.
             for stone in cfg.stones:  # cfg.stones - PolygonSet class, stone - Polygon class with
                                         #  points property which is a list of points (Point class)
                 if stone.center().dist(cheerio) < cfg.cheerio_radius + cfg.stone_size:
@@ -147,6 +146,18 @@ class DeterministicRunner(Runner):
 
 
 class StickyRunner(Runner):
+    """
+    Simulation with the following rules:
+
+    1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
+    when there are no cubes in the vicinity of the load.
+
+    2)When there are cubes - determine the following directions: a) Closest side of the allowed
+    regions to the direction of the nest b) Closest side of the allowed regions to the direction
+    of the current velocity Thereupon, determine which of these directions is closest to the
+    current velocity, and set it as the current velocity
+    """
+
     def __init__(self, cfg: Configuration, max_steps=10000):
         super().__init__(cfg, max_steps)
         self.speed = self.cfg.cheerio_radius * 0.05
@@ -164,17 +175,29 @@ class StickyRunner(Runner):
 
         # Where can we currently go
         allowable = cfg.stones.open_direction_for_circle(cheerio, cfg.cheerio_radius, self.speed)
-        if allowable.is_empty():
+        if not allowable:
             raise SimulationError()
 
         # Update speed
-        to_nest = (self.cfg.nest - self.cheerio).resize(self.speed)
+        to_nest = (self.cfg.nest - self.cheerio).resize(self.speed)  # speed vector in the direction
+        # of the nest (determined by the last datapoint of the load in that maze)
         if allowable.full:
+            # Case where there is no cubes in the way of the load
             self.v = to_nest
         else:
-            v1 = allowable.align_with_closest_side(self.v)
+            # When there are any cubes in the vicinity of the load, it aligns with the closest
+            # side of the allowed region to the current velocity direction or the closest to the
+            # side of the allowed region to the nest direction, whichever is closer to to the
+            # current velocity direction
+
+            v1 = allowable.align_with_closest_side(self.v)  # closest side of the allowed regions
+            #  to the current velocity direction
             if not allowable.contains(to_nest):
-                to_nest = allowable.align_with_closest_side(to_nest)
+                to_nest = allowable.align_with_closest_side(to_nest)  # closest side of the allowed
+                # regions to the nest direction
+
+            # Determine which of v1 or to_nest are closest to the current velocity direction and
+            # set it as the new current velocity
             if self.v.cos(v1) > self.v.cos(to_nest):
                 self.v = v1
             else:
@@ -214,7 +237,7 @@ class SimulationRunner(Runner):
 
         # Where can we currently go
         allowable = cfg.stones.open_direction_for_circle(cheerio, cfg.cheerio_radius, self.speed)
-        if allowable.is_empty():
+        if not allowable:
             raise SimulationError()
 
         if self.sigma:
@@ -279,7 +302,7 @@ class SimulationRunner2(Runner):
 
         # Where can we currently go
         allowable = cfg.stones.open_direction_for_circle(cheerio, cfg.cheerio_radius, self.speed)
-        if allowable.is_empty():
+        if not allowable:
             raise SimulationError
 
         # Update speed

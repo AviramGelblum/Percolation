@@ -28,6 +28,9 @@
 # will random walk until target dist is achieved.
 # For the winning ant, we take the last time it was at pull_dist_factor * target_dist,
 # and that is where we pull to.
+from misc import *
+from general_region import GRegion
+
 def random_walks_from_cheerio(start, num_ants, target_dist):
     full = GRegion()
     ants = [ start + full.rand_point(cheerio_radius) for i in range(num_ants) ]
@@ -67,7 +70,7 @@ def run_old(cheerio, num_frames):
             break
 
         allowable = stones.open_direction_for_circle(cheerio, cheerio_radius, maxSpeed)
-        if allowable.is_empty():
+        if not allowable:
             print("Stuck!")
             break
 
@@ -111,7 +114,7 @@ def run2(cheerio, num_frames):
             print("Yey!")
             break
         allowable = stones.open_direction_for_circle(cheerio, cheerio_radius, maxSpeed)
-        if allowable.is_empty():
+        if not allowable:
             print("Stuck!")
             break
         to_draw = [(Circle(cheerio, cheerio_radius), "green")]
@@ -167,7 +170,7 @@ def run(cheerio, num_frames):
             print("Yey!")
             break
         allowable = stones.open_direction_for_circle(cheerio, cheerio_radius, max_speed)
-        if allowable.is_empty():
+        if not allowable:
             print("Stuck!")
             break
         placements.append(to_draw(cheerio, v, pull))
@@ -207,7 +210,7 @@ def run(cheerio, num_frames):
             print("Yey!")
             break
         allowable = stones.open_direction_for_circle(cheerio, cheerio_radius, cheerio_speed)
-        if allowable.is_empty():
+        if not allowable:
             print("Stuck!")
             break
 

@@ -21,8 +21,9 @@ class GRegion:
         self.center = center
         self.size = size
 
-    def is_empty(self):
-        return not self.full and not self.regions
+    def __bool__(self):
+        # true if any regions are allowed
+        return self.full or not not self.regions
 
     def width(self):
         """Compute total angle of all regions"""
