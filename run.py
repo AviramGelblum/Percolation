@@ -152,10 +152,11 @@ class StickyRunner(Runner):
     1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
     when there are no cubes in the vicinity of the load.
 
-    2)When there are cubes - determine the following directions: a) Closest side of the allowed
-    regions to the direction of the nest b) Closest side of the allowed regions to the direction
-    of the current velocity Thereupon, determine which of these directions is closest to the
-    current velocity, and set it as the current velocity
+    2)When there are cubes - determine the following directions:
+        a) Closest side of the allowed regions to the direction of the nest
+        b) Closest side of the allowed regions to the direction of the current velocity.
+    Thereupon, determine which of these directions is closest to the current velocity, and set it as
+    the current velocity.
     """
 
     def __init__(self, cfg: Configuration, max_steps=10000):
