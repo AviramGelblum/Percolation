@@ -21,10 +21,12 @@ class P:
 
     @classmethod
     def random(cls):
+        """class method/static method creating a random point."""
         return cls(misc.rand(), misc.rand())
 
     @classmethod
     def polar(cls, size, angle):
+        """class method/static method creating point given polar coordinates (size,angle)."""
         return cls(size * np.cos(angle), size * np.sin(angle))
 
     def __add__(self, other):
@@ -36,10 +38,10 @@ class P:
     def __neg__(self):
         return P(-self.x, -self.y)
 
-    def __mul__(self,other):
+    def __mul__(self, other):
         try:
             return self.x * other.x + self.y * other.y
-        except: # for the case where other is a constant
+        except AttributeError:  # for the case where other is a constant
             return P(other * self.x, other * self.y)
 
     def __eq__(self, other):
@@ -89,11 +91,14 @@ class P:
 
     @misc.remember
     def angle(self):
+        """calculate angle for the (x,y) vector.
+        Generally just arctan2 with support for special cases.
+        """
         if self.y == 0:
             if self.x > 0:
-                return 0
+                return 0  # going in the x-direction
             else:
-                return -np.pi
+                return -np.pi  # = np.pi, going in the -x-direction
         return np.arctan2(self.y, self.x)
 
     @misc.remember
@@ -122,6 +127,7 @@ class P:
             return val
 
     def rotate(self, angle):
+        """Rotate vector with angle=angle."""
         return P.polar(self.norm(), self.angle() + angle)
 
     @staticmethod

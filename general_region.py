@@ -102,20 +102,30 @@ class GRegion:
         exit(1)
 
     def rand_point_normal(self, direction, sigma):
+        """
+        Choose a random point from a normal distribution with mean direction and standard deviation
+        sigma.
+        """
+        def cdf(x_var):  # shorthand function for cumulative distribution function with SD=sigma
+            return sct.norm.cdf(x_var, scale=sigma)
 
-        def cdf(x):
-            return sct.norm.cdf(x, scale=sigma)
-
-        def ppf(x):  # the inverse
-            return sct.norm.ppf(x, scale=sigma)
+        def ppf(x_var):  # shorthand function for inverse of the cumulative distribution function
+            # with SD=sigma
+            return sct.norm.ppf(x_var, scale=sigma)
 
         intervals = []
         if self.full:
+            # Truncating normal distribution to fit angular variable
             intervals += [(cdf(-math.pi), cdf(math.pi))]
         else:
+
             for r in self.regions:
+                # rotating region sides to be centered around direction
                 a1 = r.p1.rotate(-(direction.angle())).angle()
                 a2 = r.p2.rotate(-(direction.angle())).angle()
+                # if the allowed region contains the nest-bound direction, cut intervals to it,
+                # otherwise
+                # add the
                 if r.contains(-direction):
                     intervals += [(cdf(a1), cdf(math.pi))]
                     intervals += [(cdf(-math.pi), cdf(a2))]

@@ -44,7 +44,7 @@ class SimulationError(Exception):
 
 
 class AntRunner(Runner):
-    """Create the path object from the load trajectory data."""
+    """Subclass Creating the path object from the load trajectory data."""
     def __init__(self, cfg: Configuration, index=1):
         super().__init__(cfg)
         self.index = index  # Defined initial point in trajectory
@@ -64,7 +64,7 @@ class AntRunner(Runner):
 
 class DeterministicRunner(Runner):
     """
-    Simulation with the following rules:
+    Subclass simulation with the following rules (always aligning with nest direction):
 
     1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
     for as long as possible.
@@ -84,8 +84,8 @@ class DeterministicRunner(Runner):
         """Resets the runner to the first location with given/random seed.
         """
         super().restart()
-        self.cheerio = self.cfg.start
-        self.v = P(0, 0)
+        self.cheerio = self.cfg.start  # initial location based on real data/(0,mid-y)
+        self.v = P(0, 0)  # no initial velocity direction
 
     def step(self):
         """Get next load location
@@ -139,7 +139,8 @@ class DeterministicRunner(Runner):
         #                       "step=", self.speed)
         #
 
-        return self.cheerio, False
+        return self.cheerio, False # second argument is used to determine whether the simulation is
+        # finished
 
 
 #####################################################################
@@ -147,7 +148,7 @@ class DeterministicRunner(Runner):
 
 class StickyRunner(Runner):
     """
-    Simulation with the following rules:
+    Subclass simulation with the following rules (sticking to cube edges):
 
     1)Go in the direction of the nest (defined by actual load data motion for each real cube maze)
     when there are no cubes in the vicinity of the load.
@@ -161,14 +162,14 @@ class StickyRunner(Runner):
 
     def __init__(self, cfg: Configuration, max_steps=10000):
         super().__init__(cfg, max_steps)
-        self.speed = self.cfg.cheerio_radius * 0.05
-        self.cheerio = self.cfg.start
-        self.v = P(0, 0)
+        self.speed = self.cfg.cheerio_radius * 0.05  # step size
+        self.cheerio = self.cfg.start  # initial location based on real data/(0,mid-y)
+        self.v = P(0, 0)  # no initial velocity direction
 
     def restart(self):
         super().restart()
-        self.cheerio = self.cfg.start
-        self.v = P(0, 0)
+        self.cheerio = self.cfg.start  # initial location based on real data/(0,mid-y)
+        self.v = P(0, 0)  # no initial velocity direction
 
     def step(self):
         cfg = self.cfg
@@ -181,7 +182,7 @@ class StickyRunner(Runner):
 
         # Update speed
         to_nest = (self.cfg.nest - self.cheerio).resize(self.speed)  # speed vector in the direction
-        # of the nest (determined by the last datapoint of the load in that maze)
+        # of the nest (determined by the last data point of the load in that maze)
         if allowable.full:
             # Case where there is no cubes in the way of the load
             self.v = to_nest
@@ -206,14 +207,24 @@ class StickyRunner(Runner):
 
         # Move cheerio
         self.cheerio = cheerio + self.v
-        return cheerio, False
+        return cheerio, False  # second argument is used to determine whether the simulation is
+        # finished
 
 
 #####################################################################
 
 
 class SimulationRunner(Runner):
-    def __init__(self, cfg: Configuration, seed=None, sigma=0, rolling=True, persistence_dist=6, max_steps=10000):
+    """
+    Subclass simulation with the following rules (changing targets):
+
+    1)
+    2)
+    """
+
+    def __init__(self, cfg: Configuration, seed=None, sigma=0, rolling=True, persistence_dist=6,
+                 max_steps=10000):
+        """"""
         super().__init__(cfg, max_steps, seed)
         self.speed = self.cfg.cheerio_radius * 0.05
         self.sigma = sigma
@@ -242,17 +253,22 @@ class SimulationRunner(Runner):
             raise SimulationError()
 
         if self.sigma:
-            # Update target
+            # Update target - conditions:no target OR exceeded persistence length walking towards
+            #  current target OR (not rolling and cannot persist in the same direction (cube in
+            # the way))
             if not self.current_target or self.dist_on_same_target >= self.persistence_dist \
                     or (not self.rolling and not allowable.contains(self.v)):
                 if self.rolling:
                     choices = GRegion()
                 else:
                     choices = allowable
+                # Choose random direction around nest direction (normal distribution), create new
+                # target
                 rand_dir = choices.rand_point_normal(cfg.nest - cheerio, self.sigma)
                 self.current_target = cheerio + rand_dir.resize(0.2)
-                self.dist_on_same_target = 0
+                self.dist_on_same_target = 0  # Reset distance walked towards the target
             else:
+                # Accumulate distance walked towards the target
                 self.dist_on_same_target += self.speed
 
         # Update speed
