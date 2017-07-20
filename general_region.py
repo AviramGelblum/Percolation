@@ -89,22 +89,39 @@ class GRegion:
         return res
 
     def rand_point(self, size):
+        """
+        Generate a random vector within the allowable region.
+        :param size: norm of the vector to be generated
+        :return:  a random vector within the allowable regions (class P)
+        """
         if self.full:
+            # if all motion is allowed, generate a completely random vector
             return P(misc.rand()-0.5, misc.rand()-0.5).resize(size)
+
+        # else, generate a vector within the allowable regions
+
+        # Draw a random angle within the accumulated allowed
+        # regions total angle
         t = misc.rand() * self.width()
         total = 0
+
+        # Find in which region this randomly generated angle falls
         for r in self.regions:
             total += r.angle()
             if total >= t:
-                res = r.rand_point(size)
+                res = r.rand_point(size)  # Generate a random vector of norm=size within the
+                # randomly chosen region
                 return res
         print("Apparently stuck", self.width())
         exit(1)
 
     def rand_point_normal(self, direction, sigma):
         """
-        Choose a random point from a normal distribution with mean direction and standard deviation
-        sigma.
+        Choose a random angle from a normal distribution with mean direction and standard
+        deviation sigma. Rotate input direction by this angle, unless it is too large (above
+        100). if so, draw a completely random direction. Note that since the normal distribution
+        is not defined on an angular variable, the actual pdf we use is not truly normally
+        distributed around the 0-direction (but it is close enough for our purposes).
         """
         def cdf(x_var):  # shorthand function for cumulative distribution function with SD=sigma
             return sct.norm.cdf(x_var, scale=sigma)
@@ -115,30 +132,35 @@ class GRegion:
 
         intervals = []
         if self.full:
-            # Truncating normal distribution to fit angular variable
+            # Truncating normal distribution cdf to fit angular variable
             intervals += [(cdf(-math.pi), cdf(math.pi))]
         else:
 
             for r in self.regions:
-                # rotating region sides to be centered around direction
+                # Rotating region sides to be centered around direction
                 a1 = r.p1.rotate(-(direction.angle())).angle()
                 a2 = r.p2.rotate(-(direction.angle())).angle()
-                # if the allowed region contains the nest-bound direction, cut intervals to it,
-                # otherwise
-                # add the
+
+                # Make sure interval boundaries are set up correctly
                 if r.contains(-direction):
                     intervals += [(cdf(a1), cdf(math.pi))]
                     intervals += [(cdf(-math.pi), cdf(a2))]
                 else:
                     intervals += [(cdf(a1), cdf(a2))]
 
+        # Accumulate allowed cdf(angle) in all intervals to randomly draw from
         total = 0
         for x, y in intervals:
             total += y - x
         t = misc.rand() * total
+
+        # Go over all intervals and translate random number t into the actual corresponding angle
+        # in the accumulated cdf intervals
         for x, y in intervals:
             if t <= y - x:
-                angle = ppf(x+t)
+                angle = ppf(x+t)  # translate from x+t=cdf(angle) back to angle
+                # if angle change is too large, choose random direction, else, rotate by this
+                # angle.
                 if angle > 100:
                     return self.rand_point(direction.norm())
                 return direction.rotate(angle)

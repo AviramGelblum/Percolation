@@ -70,6 +70,7 @@ def most(item_list, func):
 
 
 def pairs(l):
+    """Iterate over a list of length l, yielding two points at a time"""
     for i in range(int(len(l) / 2)):
         yield l[2*i], l[2*i+1]
 

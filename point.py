@@ -106,6 +106,11 @@ class P:
         return np.rad2deg(self.angle())
 
     def angle_with(self, other):
+        """
+        Calculate the clockwise angle between two vectors (vector 2 "other" - vector 1 "self").
+        :param other: second vector
+        :return: angle computed (int)
+        """
         ang1 = self.angle()
         ang2 = other.angle()
         if ang2 >= ang1:

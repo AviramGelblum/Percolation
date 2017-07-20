@@ -1,4 +1,5 @@
-from misc import *
+import misc
+from typing import List
 from point import P
 from segment import S
 from polygon import Polygon
@@ -26,7 +27,7 @@ class MotionPath:
         self.points = []
         for s in segments:
             self.points.append(s.p)
-        self.points.append(s.q)
+            self.points.append(s.q)
 
     def random_step(self, stones: PolygonSet, step_size: float, bias: P):
         last = self.last()
@@ -34,7 +35,7 @@ class MotionPath:
         if not directions:
             print("walk stuck")
             exit(1)
-        if rand() < 0.5:
+        if misc.rand() < 0.5:
             random_directions = [directions.rand_point(step_size) for i in range(2)]
             direction = bias.resize(step_size).closest_point(random_directions)
         else:
@@ -44,16 +45,14 @@ class MotionPath:
     def length(self, gran=0.001):
         if not self.points:
             return 0
-        sum = 0
+        sump = 0
         last = self.points[0]
         for p in self.points:
             d = p.dist(last)
             if d > gran:
-                sum += d
+                sump += d
                 last = p
-        return sum
-
-
+        return sump
 
     def simplify(self, stones: PolygonSet):
         stack = []

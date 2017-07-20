@@ -26,6 +26,7 @@ class PolygonSet:
         return any(poly2.intersects(poly) for poly2 in self.polys)
 
     def add(self, poly: Polygon, allow_intersecting=False):
+        """Add polygon object to list of polygons."""
         if allow_intersecting or not self.intersects(poly):
             self.polys.append(poly)
             return True

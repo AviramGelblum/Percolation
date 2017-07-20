@@ -13,25 +13,27 @@ from run import *
 from plots import Plots
 
 
-
 def run_movie(cfg: Configuration, runner: Runner, only_plot=False, only_save=False):
     """Create the video."""
     movie = Movie()
     movie.background([(cfg, "black")])  # draws the cubes
     cheerios, result = Run(runner).run()  # runs the algorithm/analysis specified by runner
+    # returns a list of points (class p) specifying the location of the load over time and a
+    # boolean variable describing whether the run was successful
     print(result)
     if only_plot or only_save:
-        movie.background([(MotionPath(cheerios), "green")])  # draws the cheerio path
+        movie.background([(MotionPath(cheerios), "green")])  # draws the simulated load path
         if only_save:
             movie.save_figure(cfg.file_name + "_image")
         else:
-            movie.just_draw()  # plotting only the cubes
+            movie.just_draw()  # plotting without saving
     else:
-        # plotting the load trajectory within the cube maze
+        # Creating a video of the simulated load moving through the cube maze
         to_draw = []
+        # create list of tuples(Circle,str), one for each frame to be drawn in the animation
         for cheerio in cheerios:
             to_draw.append([(Circle(cheerio, cfg.cheerio_radius), "green")])
-        movie.run_animation(to_draw, 0)
+        movie.run_animation(to_draw, 0)  # drawing the load
 
 
 
@@ -374,17 +376,17 @@ f11 = "1400008"
 #check_open_directions_for_circle_avoiding_segment()
 #check_problem()
 
-#cfg = Configuration(file_name=f11)
-#runner = DeterministicRunner(cfg)
-#run_movie(cfg, runner)
+#current_cfg = Configuration(file_name=f11)
+#current_runner = DeterministicRunner(current_cfg)
+#run_movie(current_cfg, current_runner)
 #exit(0)
 
 
 for file in all_file_names():
     print(file)
-    cfg = Configuration(file_name=file)
-    runner = DeterministicRunner(cfg)
-    run_movie(cfg, runner, only_save=True)
+    current_cfg = Configuration(file_name=file)
+    current_runner = DeterministicRunner(current_cfg)
+    run_movie(current_cfg, current_runner, only_save=True)
 
 exit(0)
 
@@ -392,18 +394,18 @@ exit(0)
 
 
 # for file_name in all_file_names():
-#     cfg = Configuration(file_name=file_name)
-#     boxes(cfg, 6, draw=True)
+#     current_cfg = Configuration(file_name=file_name)
+#     boxes(current_cfg, 6, draw=True)
 # exit(0)
 
-# cfg = Configuration(num_stones=200)
+# current_cfg = Configuration(num_stones=200)
 
 # size = 10
 # good = np.zeros(size + 1)
 # count = np.zeros(size + 1)
 # for file_name in all_file_names():
-#     cfg = Configuration(file_name=file_name)
-#     for res, fullness in boxes(cfg, draw=False):
+#     current_cfg = Configuration(file_name=file_name)
+#     for res, fullness in boxes(current_cfg, draw=False):
 #         index = int(fullness * size)
 #         count[index] += 1
 #         if res:
@@ -413,21 +415,21 @@ exit(0)
 # print(hist)
 # exit(0)
 
-# run_movie(cfg)
-# run_two(cfg)
+# run_movie(current_cfg)
+# run_two(current_cfg)
 #
 # for file_name in all_file_names():
-#     cfg = Configuration(file_name=file_name)
-#     experiment(cfg, 10, False)
-#     cfg.rolling = False
-#     experiment(cfg, 10, False)
+#     current_cfg = Configuration(file_name=file_name)
+#     experiment(current_cfg, 10, False)
+#     current_cfg.rolling = False
+#     experiment(current_cfg, 10, False)
 # exit(0)
 #
 # for i in range(100, 550, 50):
-#     cfg = Configuration(num_stones=i, rolling=True)
-#     experiment(cfg, 25, True)
-#     cfg = Configuration(num_stones=i, rolling=False)
-#     experiment(cfg, 25, True)
+#     current_cfg = Configuration(num_stones=i, rolling=True)
+#     experiment(current_cfg, 25, True)
+#     current_cfg = Configuration(num_stones=i, rolling=False)
+#     experiment(current_cfg, 25, True)
 #     print()
 # exit(0)
 #

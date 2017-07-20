@@ -1,5 +1,5 @@
 
-from misc import *
+import misc
 from path import MotionPath
 from point import P
 from polygon_set import PolygonSet
@@ -8,32 +8,54 @@ from circle import Circle
 
 
 class Configuration:
+    """
+    Configuration class defines the basic data for a specific video, extracting the data from the
+    .txt files. The following are defined: cube locations and actual path taken by the ants.
+    Configuration possesses a draw() method used to draw these.
+    """
 
     def __init__(self, base_dir="data", file_name=None, seed=None, num_stones=0):
-        self.base_dir = base_dir
-        self.file_name = file_name
+        """
+        Extract data from txt files and save in our defined classes.
+
+        :param base_dir:  directory name within the root
+        :param file_name: video number
+        :param seed: seed - in case we are running a simulation on a random distribution of cubes
+        :param num_stones: number of stones to be randomized in case of simulation on a random
+        distribution
+        """
+
+        self.base_dir = base_dir  # root/base_dir - directory name
+        self.file_name = file_name  # number of video
+
+        # used for normalization of the data to the range 0-1
         max_y = 1
         min_y = 0
-        self.stones = PolygonSet()
-        self.path = None
-        if self.file_name:
+
+        self.stones = PolygonSet()  # PolygonSet object which will contain a list of polygons
+        # corresponding to the cubes
+
+        self.path = None  # placeholder for normalized trajectory data
+        if self.file_name:  # if there is data (not random cube maze)
             trajectory_file_name = self.base_dir + "/" + file_name + "_load_trajectory.txt"
             stones_file_name = self.base_dir + "/" + file_name + ".txt"
-            m = 0.0
-            raw_stone_values = []
+            m = 0.0  # placeholder for max value in x or y
+            raw_stone_values = []  # placeholder for extracted cube data
             try:
                 with open(stones_file_name, 'r') as f:
                     for line in f:
+                        # get cube data
                         new_values = [float(x) for x in line.split()]
                         raw_stone_values.append(new_values)
                         m = max(m, max(new_values))
             except IOError:
                 print("Warning: stones file not found: ", stones_file_name)
 
-            raw_path_values = []
+            raw_path_values = []  # placeholder for extracted trajectory data
             try:
                 with open(trajectory_file_name, 'r') as f:
                     for line in f:
+                        # get trajectory data
                         new_values = [float(x) for x in line.split()]
                         raw_path_values.append(new_values)
                         m = max(m, max(new_values))
@@ -42,15 +64,19 @@ class Configuration:
 
             if raw_stone_values:
                 for raw_stone in raw_stone_values:
-                    stone = Polygon([P(x / m, y / m) for x, y in pairs(raw_stone)])
-                    self.stones.add(stone, allow_intersecting=True)
+                    # normalize cubes and put in Polygon objects
+                    stone = Polygon([P(x / m, y / m) for x, y in misc.pairs(raw_stone)])
+                    self.stones.add(stone, allow_intersecting=True)  # add to PolygonSet object
                 max_y = max(p.y for stone in self.stones for p in stone.points)
                 min_y = min(p.y for stone in self.stones for p in stone.points)
 
             if raw_path_values:
+                # normalize path and put in a List object
                 path = [P(x / m, y / m) for x, y in raw_path_values]
-                self.path = MotionPath(path)
+                self.path = MotionPath(path)  # define MotionPath Object from list
 
+        # if cube data is taken from actual video, get sizes from data. Else, get sizes from
+        # general data measurements.
         if self.stones.polys:
             self.stone_size = self.stones.polys[-1].segments[0].length()
             self.cheerio_radius = self.stone_size / 0.7
@@ -60,18 +86,22 @@ class Configuration:
             self.cheerio_radius = 1 / real_boardy
             self.stone_size = self.cheerio_radius * 0.7
 
+        # Randomized cube maze generation
         if not file_name:
-            self.seed = init_rand(seed)
+            self.seed = misc.init_rand(seed)
             self.stones.random_squares(num_stones, self.stone_size)
 
+        # Fictitious initial path for nest direction and starting point - (0,midy) to (1,midy)
         if not self.path:
             mid_y = (max_y + min_y) / 2
             self.path = MotionPath([P(0, mid_y), P(1, mid_y)])
-        self.start = self.path.points[0]
+        self.start = self.path.points[0]  # Initial location of load - from data or (0,midy)
         temp = self.path.points[-1]
-        self.nest = self.start + (temp - self.start) * 2
-        self.num_stones = len(self.stones.polys)
+        self.nest = self.start + (temp - self.start) * 2  # Initial location of nest - from data or
+        # (2,midy)
+        self.num_stones = len(self.stones.polys)  # used for command-line printing
 
+        # Create border polygon objects to prevent the simulated load from wandering too far.
         dy = self.cheerio_radius/2
         border1 = Polygon.rectangle(P(-1, min_y - 2*dy), 2, dy)
         border2 = Polygon.rectangle(P(-1, max_y + dy), 2, dy)
@@ -86,6 +116,15 @@ class Configuration:
         return '[{},{}]'.format(f, self.num_stones)
 
     def draw(self, ax, color):
+        """
+        Method for drawing the cubes, highlighted areas around the cubes where the load center
+        cannot go, and the actual trajectory path.
+        This is a shell calling the actual drawing methods for the above objects.
+
+        :param ax: axis object in which the drawables will be drawn
+        :param color: not used, str color input for drawing everything
+        :return:
+        """
         for stone in self.stones:
             for s in stone.segments:
                 poly = Polygon.tilted_rectangle(s.p, (s.q - s.p).norm(), self.cheerio_radius,
