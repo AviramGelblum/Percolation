@@ -1,7 +1,8 @@
-from misc import *
-
-
-#############################################################
+import misc
+import math
+import numpy as np
+import matplotlib.patches
+###########################################################
 # Points
 
 
@@ -20,10 +21,12 @@ class P:
 
     @classmethod
     def random(cls):
-        return cls(rand(), rand())
+        """class method/static method creating a random point."""
+        return cls(misc.rand(), misc.rand())
 
     @classmethod
     def polar(cls, size, angle):
+        """class method/static method creating point given polar coordinates (size,angle)."""
         return cls(size * np.cos(angle), size * np.sin(angle))
 
     def __add__(self, other):
@@ -35,10 +38,10 @@ class P:
     def __neg__(self):
         return P(-self.x, -self.y)
 
-    def __mul__(self,other):
+    def __mul__(self, other):
         try:
             return self.x * other.x + self.y * other.y
-        except: # for the case where other is a constant
+        except AttributeError:  # for the case where other is a constant
             return P(other * self.x, other * self.y)
 
     def __eq__(self, other):
@@ -48,12 +51,13 @@ class P:
         return self.x, self.y
 
     @classmethod
-    @remember
+    @misc.remember
     def zero(cls):
         return P(0, 0)
 
-    @remember
+    @misc.remember
     def perp(self):
+        """Compute anticlockwise perpendicular vector."""
         return P(-self.y, self.x)
 
     def is_parallel(self, other):
@@ -66,7 +70,7 @@ class P:
     def to_grid(self, granularity):
         return P(math.floor(self.x / granularity), math.floor(self.y/granularity))
 
-    @remember
+    @misc.remember
     def norm(self):
         return np.sqrt(self * self)
 
@@ -85,20 +89,28 @@ class P:
             return P(0, 0)
         return P(self.x * (size/norm), self.y * (size/norm))
 
-    @remember
+    @misc.remember
     def angle(self):
+        """calculate angle for the (x,y) vector.
+        Generally just arctan2 with support for special cases.
+        """
         if self.y == 0:
             if self.x > 0:
-                return 0
+                return 0  # going in the x-direction
             else:
-                return -np.pi
+                return -np.pi  # = np.pi, going in the -x-direction
         return np.arctan2(self.y, self.x)
 
-    @remember
+    @misc.remember
     def angle_degrees(self):
         return np.rad2deg(self.angle())
 
     def angle_with(self, other):
+        """
+        Calculate the clockwise angle between two vectors (vector 2 "other" - vector 1 "self").
+        :param other: second vector
+        :return: angle computed (int)
+        """
         ang1 = self.angle()
         ang2 = other.angle()
         if ang2 >= ang1:
@@ -120,14 +132,19 @@ class P:
             return val
 
     def rotate(self, angle):
+        """Rotate vector with angle=angle."""
         return P.polar(self.norm(), self.angle() + angle)
 
     @staticmethod
-    # Solves the equation a*p1 + b*p2 = q
     def solve(p1, p2, q):
+        """
+        Solve the equation a*p1 + b*p2 = q. Returns the coefficients a and b for the vectors
+        p1 and p2, so that q is decomposed in the p1 and p2 basis with these coefficients for the
+        basis vectors.
+        """
         if p1.is_parallel(p2):
             return None, None
-        if abs(p1.x) > abs(p1.y): # this has to do with accuracy
+        if abs(p1.x) > abs(p1.y):  # this has to do with accuracy
             b = (q.y*p1.x - q.x*p1.y) / (p2.y*p1.x - p2.x*p1.y)
             a = (q.x - b*p2.x) / p1.x
         else:
@@ -136,13 +153,13 @@ class P:
         return a, b
 
     def closest_point(self, points):
-        return most(points, lambda x: -self.dist(x))[0]
+        return misc.most(points, lambda x: -self.dist(x))[0]
 
     def furthest_point(self, points):
-        return most(points, lambda x: self.dist(x))[0]
+        return misc.most(points, lambda x: self.dist(x))[0]
 
     def draw(self, ax, color, radius=0.001):
-        c = patches.Circle((self.x, self.y), radius, lw=0, fc=color)
+        c = matplotlib.patches.Circle((self.x, self.y), radius, lw=0, fc=color)
         ax.add_patch(c)
         return [c]
 

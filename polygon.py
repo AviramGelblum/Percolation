@@ -4,6 +4,7 @@ from segment import S
 from circle import Circle
 from rectangle import Rectangle
 
+
 class Polygon:
 
     @staticmethod

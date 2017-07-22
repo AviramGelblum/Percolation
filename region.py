@@ -6,10 +6,18 @@ from segment import S
 # Describes the region between two rays.
 # second one is counter-clockwise from the first
 
+
 class Region:
-    def __init__(self, p1, p2):
-        self.p1 = p1.copy()
-        self.p2 = p2.copy()
+    def __init__(self, p1=None, p2=None):
+        try:
+            self.p1 = p1.copy()
+            self.p2 = p2.copy()
+        except AttributeError:
+            self.p1 = None
+            self.p2 = None
+
+    def __bool__(self):
+        return not not self.p1
 
     def __iter__(self):
         yield self.p1
@@ -27,6 +35,10 @@ class Region:
 
     @remember
     def angle(self):
+        """
+        Calculate clockwise angle (p2-p1) between region sides
+        :return: computed angle (int)
+        """
         return self.p1.angle_with(self.p2)
 
     def contains(self, p):
@@ -66,9 +78,20 @@ class Region:
         return a1 + a2 + [a3]
 
     def point_at_angle(self, angle, size=1.0):
+        """
+        Generate vector within the region.
+        :param angle: relative angle (within the region) of the generated vector
+        :param size: norm of the generated vector
+        :return: the vector generated (class P)
+        """
         return P.polar(size, self.p1.angle() + angle)
 
     def rand_point(self, size):
+        """
+        Generate a random vector within the region boundaries
+        :param size: norm of the vector to be generated
+        :return: a random vector within the allowable region (class P)
+        """
         return self.point_at_angle(rand() * self.angle(), size)
 
 

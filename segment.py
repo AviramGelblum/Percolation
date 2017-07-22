@@ -56,8 +56,8 @@ class S:
         a, b = self.intersection_params(other)
         return self.p + self.dir * a
 
-    # returns the point on the segment that is closest to p, and the distance to it.
     def closest_point(self, p):
+        """Return the point on the segment that is closest to p, and the distance to it"""
         a, b = P.solve(self.dir, self.dir.perp(), p - self.p)
         if 0 < a < 1:
             return self.p + self.dir * a, self.dir.norm() * abs(b)
@@ -67,22 +67,41 @@ class S:
         else:
             return self.q, q_dist
 
-    # returns a segment
-    def intersect_with_circle(self, p, radius):
-        # First Find the closest point on the line.
-        dir = self.dir
-        norm = dir.norm()
-        perp = dir.perp()
-        a, b = P.solve(dir, perp, p - self.p)
-        height = abs(b) * norm
+    def intersect_with_circle(self, center_point, radius):
+        """Intersection of segment object with circle. Returns a segment holding either the two
+        points intersecting the circle, the point intersecting and the endpoint contained within
+        the circle, or None (if no intersection exists)"""
+
+        # First find the closest point on the line.
+        # work in the frame of reference where self.p is zero
+        segment_direction = self.dir
+        segment_norm = segment_direction.norm()
+        perp = segment_direction.perp()
+
+        # solve the equation a*segment_direction+b*perp=center_point-self.p, where a and b are
+        # the coefficients of the vectors we are looking for. segment_direction and perp are
+        # perpendicular and so represent a basis in which we can define a linear combination of
+        # them to get center_point-self.p.
+        a, b = P.solve(segment_direction, perp, center_point - self.p)
+        height = abs(b) * segment_norm  # the height of the triangle created by the intersection
+        #  points and the center_point
+
         if height > radius:
+            # no intersections
             return None
-        base_size = np.sqrt(radius * radius - height * height) / norm
+        base_size = np.sqrt(radius * radius - height * height) / segment_norm # base_size is normalized
+        # to the size of segment_direction
+
+        # locations of intersections on the vector segment_direction
         left = a - base_size
         right = a + base_size
         if right < 0 or left > 1:
+            # entire segment is outside of the circle
             return None
-        return S(self.p + dir * max(0, left), self.p + dir * min(1, right))
+
+        # Return segment in absolute frame of reference, max and min used for cases where there
+        # is only one intersection
+        return S(self.p + segment_direction * max(0, left), self.p + segment_direction * min(1, right))
 
     # Checks if self separates p from all points
     def separates(self, p, points):
