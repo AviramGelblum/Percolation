@@ -3,21 +3,25 @@ Percolation is a simulation/analysis combined program made in order to check dif
 the motion of a group of collectively carrying ants within a maze of cubes.
 """
 
-from misc import *
+import misc
 from heat_map import HeatMap
-from tests import *
+# from tests import *
 from path import MotionPath
 from movie import Movie
-from configuration import Configuration
-from run import *
+import configuration
+import run
+import circle
+import rectangle
+import numpy as np
 from plots import Plots
 
 
-def run_movie(cfg: Configuration, runner: Runner, only_plot=False, only_save=False):
+def run_movie(cfg: configuration.Configuration, runner: run.Runner, only_plot=False,
+              only_save=False):
     """Create the video."""
     movie = Movie()
     movie.background([(cfg, "black")])  # draws the cubes
-    cheerios, result = Run(runner).run()  # runs the algorithm/analysis specified by runner
+    cheerios, result = run.Run(runner).run()  # runs the algorithm/analysis specified by runner
     # returns a list of points (class p) specifying the location of the load over time and a
     # boolean variable describing whether the run was successful
     print(result)
@@ -32,33 +36,33 @@ def run_movie(cfg: Configuration, runner: Runner, only_plot=False, only_save=Fal
         to_draw = []
         # create list of tuples(Circle,str), one for each frame to be drawn in the animation
         for cheerio in cheerios:
-            to_draw.append([(Circle(cheerio, cfg.cheerio_radius), "green")])
+            to_draw.append([(circle.Circle(cheerio, cfg.cheerio_radius), "green")])
         movie.run_animation(to_draw, 0)  # drawing the load
 
 
-
-def run_two(cfg: Configuration):
+def run_two(cfg: configuration.Configuration):
     print(cfg)
     movie = Movie()
     draw_cfg(movie, cfg)
     cheerios, result = run(cfg)
     cfg.rolling = False
     cheerios2, result = run(cfg)
-    to_draw = [[(Circle(cheerio, cfg.cheerio_radius), "green"),
-                (Circle(cheerio2, cfg.cheerio_radius), "blue")]
+    to_draw = [[(circle.Circle(cheerio, cfg.cheerio_radius), "green"),
+                (circle.Circle(cheerio2, cfg.cheerio_radius), "blue")]
                for cheerio, cheerio2 in zip(cheerios, cheerios2)]
     movie.run_animation(to_draw, 0)
     exit(0)
 
 
-def just_draw_cfg(cfg: Configuration):
+def just_draw_cfg(cfg: configuration.Configuration):
     print(cfg)
     movie = Movie()
     movie.background([(cfg, "black")])
     movie.just_draw()
     exit(0)
 
-def experiment(cfg: Configuration, times, randomize_stones):
+
+def experiment(cfg: configuration.Configuration, times, randomize_stones):
     count = 0
     count_ok = 0
     total_time = 0
@@ -134,25 +138,25 @@ def box_density(cfg, box):
     return cfg.stones.box_density(cfg.cheerio_radius, box)
 
 
-def boxes(cfg, box_size_in_cheerio_radiuses=6, draw=True):
+def boxes(cfg, box_size_in_cheerio_radii=6, draw=True):
     if draw:
         movie = Movie()
         movie.background([(cfg, "black")])
-    size = box_size_in_cheerio_radiuses * cfg.cheerio_radius
+    size = box_size_in_cheerio_radii * cfg.cheerio_radius
 
     index = 0
     path = cfg.path.points
     result = []
     while index < len(path) and path[index].x < 1 - size:
         p = path[index]
-        box = Rectangle(p.x, p.y - size / 2, p.x + size, p.y + size / 2)
+        box = rectangle.Rectangle(p.x, p.y - size / 2, p.x + size, p.y + size / 2)
 
         good = 0
         times = 10
         for i in range(times):
             cfg.start = p
             cfg.reset_runseed()
-            r, sim_res = Run(SimulationRunner(cfg), containing_box=box).run()
+            r, sim_res = run.Run(run.SimulationRunner(cfg), containing_box=box).run()
             if sim_res:
                 good += 1
             if draw:
@@ -162,7 +166,7 @@ def boxes(cfg, box_size_in_cheerio_radiuses=6, draw=True):
                     color = "black"
                 movie.background([(MotionPath(r), color)])
 
-        r, ant_res = Run(AntRunner(cfg, index), containing_box=box).run()
+        r, ant_res = run.Run(run.AntRunner(cfg, index), containing_box=box).run()
         if draw:
             if ant_res:
                 color = "green"
@@ -183,15 +187,15 @@ def boxes(cfg, box_size_in_cheerio_radiuses=6, draw=True):
     return result
 
 
-def boxes_stats(cfg, box_size_in_cheerio_radiuses=6):
-    size = box_size_in_cheerio_radiuses * cfg.cheerio_radius
+def boxes_stats(cfg, box_size_in_cheerio_radii=6):
+    size = box_size_in_cheerio_radii * cfg.cheerio_radius
     index = 0
     path = cfg.path.points
     result = []
     while index < len(path) and path[index].x < 1 - size:
         p = path[index]
-        box = Rectangle(p.x, p.y - size / 2, p.x + size, p.y + size / 2)
-        r, ant_res = Run(AntRunner(cfg, index), containing_box=box).run()
+        box = rectangle.Rectangle(p.x, p.y - size / 2, p.x + size, p.y + size / 2)
+        r, ant_res = run.Run(run.AntRunner(cfg, index), containing_box=box).run()
         result.append((box_density(cfg, box), ant_res, MotionPath(r).length()))
         while index < len(path) and path[index].x < box.qx:
             index += 1
@@ -204,15 +208,15 @@ def all_boxes(size, dots=5):
     good = np.zeros(dots + 1)
     count = np.zeros(dots + 1)
     lengths = np.zeros(dots + 1)
-    for file_name in all_file_names():
-        cfg = Configuration(file_name=file_name)
+    for file_name in misc.all_file_names():
+        cfg = configuration.Configuration(file_name=file_name)
         for density, res, length in boxes_stats(cfg, size):
             index = density * dots
             length /= size * cfg.cheerio_radius
-            add_at_fractional_index(count, index, 1)
+            misc.add_at_fractional_index(count, index, 1)
             if res:
-                add_at_fractional_index(good, index, 1)
-                add_at_fractional_index(lengths, index, length)
+                misc.add_at_fractional_index(good, index, 1)
+                misc.add_at_fractional_index(lengths, index, length)
     return good / count, lengths / good
 
 
@@ -251,14 +255,14 @@ def plot_boxes2():
 ####################################################################
 
 
-def where_did_it_go(cfg: Configuration, movie, index):
+def where_did_it_go(cfg: configuration.Configuration, movie, index):
     path = cfg.path.points
     cheerio = path[index]
     box_size = cfg.cheerio_radius * 6
     safety_distance = cfg.cheerio_radius * 3 + cfg.stone_size
-    startx = cheerio.x + safety_distance
-    box1 = Rectangle(startx, cheerio.y - box_size, startx + box_size, cheerio.y)
-    box2 = Rectangle(startx, cheerio.y, startx + box_size, cheerio.y + box_size)
+    start_x = cheerio.x + safety_distance
+    box1 = rectangle.Rectangle(start_x, cheerio.y - box_size, start_x + box_size, cheerio.y)
+    box2 = rectangle.Rectangle(start_x, cheerio.y, start_x + box_size, cheerio.y + box_size)
 
     while index < len(path) and path[index].x < cheerio.x + cfg.cheerio_radius:
         index += 1
@@ -279,14 +283,12 @@ def where_did_it_go(cfg: Configuration, movie, index):
             color1 = "blue"
             color2 = "red"
         movie.background([(box1, color1), (box2, color2),
-                          (Circle(cheerio, cfg.cheerio_radius / 3), "green")])
+                          (circle.Circle(cheerio, cfg.cheerio_radius / 3), "green")])
 
     return (density1 > density2) == (path[index].y > cheerio.y)
 
 
-
-
-def remote_sensing1(cfg: Configuration, draw=False):
+def remote_sensing1(cfg: configuration.Configuration, draw=False):
     if draw:
         movie = Movie()
         movie.background([(cfg, "black")])
@@ -311,11 +313,12 @@ def remote_sensing1(cfg: Configuration, draw=False):
     print(cfg.file_name, count, count_good)
     return count, count_good
 
+
 def remote_sensing():
     count = 0
     count_good = 0
-    for file_name in all_file_names():
-        cfg = Configuration(file_name=file_name)
+    for file_name in misc.all_file_names():
+        cfg = configuration.Configuration(file_name=file_name)
         count1, count_good1 = remote_sensing1(cfg)
         count += count1
         count_good += count_good1
@@ -341,21 +344,21 @@ def max_backwards(path):
 
 
 def all_gaps():
-    for file_name in all_file_names():
-        cfg = Configuration(file_name=file_name)
+    for file_name in misc.all_file_names():
+        cfg = configuration.Configuration(file_name=file_name)
         gap, a, b = max_backwards(cfg.path.points)
         print(file_name, gap/cfg.cheerio_radius)
     exit(0)
 
 
 def draw_gap(file_name):
-    cfg = Configuration(file_name=file_name)
+    cfg = configuration.Configuration(file_name=file_name)
     gap, a, b = max_backwards(cfg.path.points)
     path = cfg.path.points
     movie = Movie()
     movie.background([(cfg, "black")])
-    movie.background([(Circle(path[a], cfg.cheerio_radius / 2), "green")])
-    movie.background([(Circle(path[b], cfg.cheerio_radius / 2), "green")])
+    movie.background([(circle.Circle(path[a], cfg.cheerio_radius / 2), "green")])
+    movie.background([(circle.Circle(path[b], cfg.cheerio_radius / 2), "green")])
     movie.just_draw()
     exit(0)
 
@@ -373,38 +376,37 @@ f11 = "1400008"
 
 
 # Difficult f10 f2 f1
-#check_open_directions_for_circle_avoiding_segment()
-#check_problem()
+# check_open_directions_for_circle_avoiding_segment()
+# check_problem()
 
-#current_cfg = Configuration(file_name=f11)
-#current_runner = DeterministicRunner(current_cfg)
-#run_movie(current_cfg, current_runner)
-#exit(0)
+# current_cfg = configuration.Configuration(file_name=f11)
+# current_runner = run.DeterministicRunner(current_cfg)
+# run_movie(current_cfg, current_runner)
+# exit(0)
 
 
-for file in all_file_names():
+for file in misc.all_file_names():
     print(file)
-    current_cfg = Configuration(file_name=file)
-    current_runner = DeterministicRunner(current_cfg)
+    current_cfg = configuration.Configuration(file_name=file)
+    current_runner = run.DeterministicRunner(current_cfg)
     run_movie(current_cfg, current_runner, only_save=True)
 
 exit(0)
 
 
 
-
-# for file_name in all_file_names():
-#     current_cfg = Configuration(file_name=file_name)
+# for file_name in misc.all_file_names():
+#     current_cfg = configuration.Configuration(file_name=file_name)
 #     boxes(current_cfg, 6, draw=True)
 # exit(0)
 
-# current_cfg = Configuration(num_stones=200)
+# current_cfg = configuration.Configuration(num_stones=200)
 
 # size = 10
 # good = np.zeros(size + 1)
 # count = np.zeros(size + 1)
 # for file_name in all_file_names():
-#     current_cfg = Configuration(file_name=file_name)
+#     current_cfg = configuration.Configuration(file_name=file_name)
 #     for res, fullness in boxes(current_cfg, draw=False):
 #         index = int(fullness * size)
 #         count[index] += 1
@@ -418,17 +420,17 @@ exit(0)
 # run_movie(current_cfg)
 # run_two(current_cfg)
 #
-# for file_name in all_file_names():
-#     current_cfg = Configuration(file_name=file_name)
+# for file_name in misc.all_file_names():
+#     current_cfg = configuration.Configuration(file_name=file_name)
 #     experiment(current_cfg, 10, False)
 #     current_cfg.rolling = False
 #     experiment(current_cfg, 10, False)
 # exit(0)
 #
 # for i in range(100, 550, 50):
-#     current_cfg = Configuration(num_stones=i, rolling=True)
+#     current_cfg = configuration.Configuration(num_stones=i, rolling=True)
 #     experiment(current_cfg, 25, True)
-#     current_cfg = Configuration(num_stones=i, rolling=False)
+#     current_cfg = configuration.Configuration(num_stones=i, rolling=False)
 #     experiment(current_cfg, 25, True)
 #     print()
 # exit(0)

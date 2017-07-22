@@ -2,8 +2,10 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from configuration import Configuration
 from path import MotionPath
+from rectangle import Rectangle
+from circle import Circle
 from typing import List, Tuple, Union
-Drawables = List[Tuple[Union[Configuration, MotionPath], str]]  # type definition
+Drawables = List[Tuple[Union[Configuration, MotionPath, Rectangle, Circle], str]]  # type definition
 
 
 class Movie:

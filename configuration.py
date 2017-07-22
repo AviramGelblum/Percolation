@@ -125,16 +125,29 @@ class Configuration:
         :param color: not used, str color input for drawing everything
         :return:
         """
+        # Create areas where the load cannot go around the cube and draw them
         for stone in self.stones:
             for s in stone.segments:
+                # For every segment of every cube, create a rectangle with the cube segment as
+                # its first side, the rectangle faces away from the cube, and the other side size
+                # is the same as the load size. This limits the load center when it is near the
+                # segment.
                 poly = Polygon.tilted_rectangle(s.p, (s.q - s.p).norm(), self.cheerio_radius,
                                                 (s.q - s.p).angle())
+
+                # However, this tilted rectangle is not enough, as it doesn't capture the
+                # limitations on the load near the vertices of the cubes. For that we also
+                # create a circle around each cube vertex.
                 circle = Circle(s.p, self.cheerio_radius)
+
+                # Draw both types of areas for each segment
                 poly.draw(ax, "lightgrey")
                 circle.draw(ax, "lightgrey")
+        # Draw cubes
         for stone in self.stones:
             stone.draw(ax, "red")
+        # Draw experimental load trajectory if one exists for the current run
         if self.path:
             self.path.draw(ax, "blue")
-        ax.text(0, 1.01, str(self))
+        ax.text(0, 1.01, str(self))  # Add number of video, seed and number of stones as text
         return []
