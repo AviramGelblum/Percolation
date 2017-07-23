@@ -44,4 +44,5 @@ fabric.properties
 modules.xml
 .idea/codeStyleSettings.xml
 .idea/misc.xml
+*.png
 *.ipr
