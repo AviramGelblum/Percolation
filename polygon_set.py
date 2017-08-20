@@ -85,12 +85,17 @@ class PolygonSet:
         return allowable
 
     def box_density(self, radius, box: Rectangle):
+        """ Calculate density of cubes within a box"""
+        # Create a bigger box to include areas of enlarged cubes outside of the box (intersection
+        # with the load body)
         bigger_box = Rectangle(box.px - radius, box.py - radius, box.qx + radius, box.qy + radius)
         my_polys = PolygonSet()
         for s in self.polys:
             for p in s.points:
                 if bigger_box.contains(p):
-                    my_polys.add(s, allow_intersecting=True)
+                    my_polys.add(s, allow_intersecting=True)  # Add all cubes which have any
+                    # intersection with the load inside the box
+        # Simulate random points within the box to estimate the density
         times = 2000
         bad = 0
         for i in range(times):

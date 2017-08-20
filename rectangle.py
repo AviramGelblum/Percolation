@@ -42,7 +42,7 @@ class Rectangle:
     def rand_point(self):
         x = self.px + rand() * (self.qx - self.px)
         y = self.py + rand() * (self.qy - self.py)
-        return P(x,y)
+        return P(x, y)
 
     def __repr__(self):
         return "BOX[{},{},{},{}]".format(self.px, self.py, self.qx, self.qy)
