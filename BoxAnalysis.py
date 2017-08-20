@@ -2,7 +2,7 @@ import configuration
 import rectangle
 import movie
 import run
-import path as path_class
+import path
 
 class BoxAnalysis:
 
@@ -33,16 +33,16 @@ class BoxAnalysis:
 
     def boxes_stats(self):
         index = 0
-        path = self.cfg.path.points
+        path_var = self.cfg.path.points
         result = []
-        while index < len(path) and path[index].x < 1 - self.size:
-            p = path[index]
+        while self.index_condition(index):
+            p = path_var[index]
             box = rectangle.Rectangle(p.x, p.y - self.size / 2, p.x + self.size, p.y + self.size
                                       / 2)
             r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
-            result.append(BoxAnalysis.box_density(self.cfg, box), ant_res, path_class.MotionPath(
-                r).length())
-            while index < len(path) and path[index].x < box.qx:
+            result.append((BoxAnalysis.box_density(self.cfg, box), ant_res, path.MotionPath(
+                r).length()))
+            while index < len(path_var) and path_var[index].x < box.qx:
                 index += 1
         return result
 
@@ -73,25 +73,26 @@ class BoxAnalysis:
                         color = "green"
                     else:
                         color = "black"
-                    movie.background([(MotionPath(r), color)])
+                        movie_instance.background([(path.MotionPath(r), color)])
 
-            r, ant_res = run.Run(run.AntRunner(cfg, index), containing_box=box).run()
+            r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
             if draw:
                 if ant_res:
                     color = "green"
                 else:
                     color = "black"
-                movie.background([(MotionPath(r), "blue")])
+                    movie_instance.background([(path.MotionPath(r), "blue")])
                 box.add_text(
-                    '{:.0f}%,{:.0f}%'.format(box_density(cfg, box) * 100, good / times * 100))
-                movie.background([(box, color)])
+                    '{:.0f}%,{:.0f}%'.format(BoxAnalysis.box_density(self.cfg, box) * 100,
+                                             good / times * 100))
+                movie_instance.background([(box, color)])
 
-            result.append((box_density(cfg, box), ant_res, good / times))
+            result.append((BoxAnalysis.box_density(self.cfg, box), ant_res, good / times))
             while index < len(path) and path[index].x < box.qx:
                 index += 1
 
         if draw:
-            movie_instance.save_figure(cfg.file_name + "_boxes")
+            movie_instance.save_figure(self.cfg.file_name + "_boxes")
             movie_instance.close()
             # movie.just_draw()
         return result
