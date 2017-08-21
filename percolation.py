@@ -12,6 +12,7 @@ import configuration
 import run
 import circle
 import rectangle
+import BoxAnalysis
 import numpy as np
 from plots import Plots
 
@@ -316,3 +317,5 @@ exit(0)
 # print(file_name)
 # create_heat_map(10, file_name)
 # read_heat_map(file_name)
+
+BoxAnalysis

@@ -45,7 +45,7 @@ class SimulationError(Exception):
 
 class AntRunner(Runner):
     """Subclass used for creating a partial trajectory from the load trajectory data."""
-    def __init__(self, cfg: Configuration, index=1):
+    def __init__(self, cfg: Configuration, index=0):
         super().__init__(cfg)
         self.index = index  # Defined initial point in trajectory
 
@@ -443,15 +443,24 @@ class Run:
         else:
             self.containing_box = Rectangle(0, 0, 1, 1)
 
-    def is_done(self, p):
+    def is_done(self, p, only_x):
         """
-        Check if max number of steps has been reached or the load is outside (after) the containing
-        box (in x).
+        Check if max number of steps has been reached or the load is outside the containing
+        box (either after the greater x, or just generally outside).
         :param p: current load location (class P)
+        :param only_x: Boolean determining type of criterion - True - load's x location needs to
+        be greater than the large x-coordinate of the box's edges. False - load's x location
+        needs to be simply outside the containing box.
         :return: boolean variable determining whether the simulation is done
         """
-        return (self.max_steps and self.steps >= self.max_steps) \
-            or p.x > self.containing_box.qx
+        if only_x:
+            bool_out = (self.max_steps and self.steps >= self.max_steps) \
+                or p.x > self.containing_box.qx
+        else:
+            bool_out = (self.max_steps and self.steps >= self.max_steps) \
+                or p.x > self.containing_box.qx or p.y > self.containing_box.qy \
+                or p.x < self.containing_box.px or p.y < self.containing_box.py
+        return bool_out
 
     def is_inside_y(self, p):
         return self.containing_box.py <= p.y <= self.containing_box.qy
@@ -470,16 +479,29 @@ class Run:
                 # real data is true when the loaded trajectory data is finished)
                 path.append(cheerio)
                 self.steps += 1
-                if self.is_done(cheerio):
-                    # simulation/analysis exceeded max time steps allowed or crossed the right
-                    # side of the containing_box (in x).
-                    if self.steps >= self.max_steps:
-                        print("Timeout")
-                    return path, True
-                if res or not self.is_inside_y(cheerio):
-                    # analysis exceeded the number of time steps within the actual data or
-                    # simulation/analysis crossed the y-boundaries of the containing_box.
-                    return path, False
+                if self.containing_box == Rectangle(0, 0, 1, 1):
+                    if self.is_done(cheerio, True):
+                        # simulation/analysis exceeded max time steps allowed or crossed the right
+                        # side of the containing_box (in x).
+                        if self.max_steps is not None:
+                            if self.steps >= self.max_steps:
+                                print("Timeout")
+                    if res or not self.is_inside_y(cheerio):
+                        # analysis exceeded the number of time steps within the actual data or
+                        # simulation/analysis crossed the y-boundaries of the containing_box.
+                        return path, False
+                else:
+                    if self.is_done(cheerio, False):
+                        # simulation/analysis exceeded max time steps allowed or exited the
+                        # containing_box.
+                        if self.max_steps is not None:
+                            if self.steps >= self.max_steps:
+                                print("Timeout")
+                                return path, False
+                        return path, True
+                    if res:
+                        # analysis exceeded the number of time steps within the actual data.
+                        return path, False
         except SimulationError:
             self.steps = 0
             #self.runner.restart()
@@ -488,6 +510,7 @@ class Run:
             #     path = []
             return path, True
             # return self.run()
+
 
     def did_it_pass_through(self, path):
         for p in path:

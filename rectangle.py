@@ -1,5 +1,6 @@
-from misc import *
+import matplotlib.patches as patches
 from point import P
+import misc
 
 
 # p = upper left corner,
@@ -40,8 +41,8 @@ class Rectangle:
                     self.py > other.qy or other.py > self.qy)
 
     def rand_point(self):
-        x = self.px + rand() * (self.qx - self.px)
-        y = self.py + rand() * (self.qy - self.py)
+        x = self.px + misc.rand() * (self.qx - self.px)
+        y = self.py + misc.rand() * (self.qy - self.py)
         return P(x, y)
 
     def __repr__(self):
@@ -53,3 +54,9 @@ class Rectangle:
         if self.text:
             ax.text(self.px, self.qy + 0.01, self.text)
         return [rect]
+
+    def __eq__(self, other):
+        return self.px == other.px and \
+            self.py == other.py and \
+            self.qx == other.qx and \
+            self.qy == other.qy
