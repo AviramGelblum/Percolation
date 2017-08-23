@@ -494,10 +494,11 @@ class Run:
                     if self.is_done(cheerio, False):
                         # simulation/analysis exceeded max time steps allowed or exited the
                         # containing_box.
-                        if self.max_steps is not None:
-                            if self.steps >= self.max_steps:
-                                print("Timeout")
-                                return path, False
+                        assert self.max_steps is None
+                        # if self.max_steps is not None:
+                        #   if self.steps >= self.max_steps:
+                        #       print("Timeout")
+                        #       return path, False
                         return path, True
                     if res:
                         # analysis exceeded the number of time steps within the actual data.

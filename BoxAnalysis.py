@@ -1,22 +1,20 @@
 import configuration
 import rectangle
-import movie
 import run
 import path
 import numpy as np
 import misc
 
 
+# noinspection PyUnboundLocalVariable
 class BoxAnalysis:
 
-    def __init__(self, scale, cfg: configuration.Configuration, load_center_loc='middle',
-                 draw=True):
+    def __init__(self, scale, cfg: configuration.Configuration, load_center_loc='middle'):
         if load_center_loc == 'middle' or load_center_loc == 'left':
             self._load_center_loc = load_center_loc
         else:
             raise ValueError('load_center_loc can only take the following values: \n\t\t middle, '
                              'left')
-        self.draw = draw
         self.cfg = cfg
         self.size = scale * self.cfg.cheerio_radius
         self.path = self.cfg.path.points
@@ -51,8 +49,7 @@ class BoxAnalysis:
                 exit_direction = 'error'
 
             self.AnalysisResult.append((self.cfg.stones.box_density(self.cfg.cheerio_radius, box),
-                                        ant_res, path.MotionPath(r).length(), exit_direction,
-                                        r_length))
+                                        path.MotionPath(r).length(), exit_direction, r_length))
 
             if self._load_center_loc == 'middle':
                 dist_test_generator = (ind for ind in range(index+r_length-1, self.path_length) if
@@ -95,22 +92,24 @@ class BoxAnalysis:
 
     @staticmethod
     def compute_statistics(analysis_results, scale):
-        sample_size = len(analysis_results)
         box_density = [i[0] for i in analysis_results]
         density_bins = np.arange(0, 1.1, 0.1)
         bins_idx = np.digitize(box_density, density_bins)
         distribution_list = []
         distributions = []
-        for current_box_density in range(0, len(density_bins)-1):
+        for current_box_density_index in range(0, density_bins.size-1):
 
             distributions.append(DistributionResults(analysis_results, bins_idx,
-                                                     current_box_density, 'Back', scale))
+                                                     density_bins[current_box_density_index],
+                                                     'Back', scale))
 
             distributions.append(DistributionResults(analysis_results, bins_idx,
-                                                     current_box_density, 'Front', scale))
+                                                     density_bins[current_box_density_index],
+                                                     'Front', scale))
 
             distributions.append(DistributionResults(analysis_results, bins_idx,
-                                                     current_box_density, 'sides', scale))
+                                                     density_bins[current_box_density_index],
+                                                     'sides', scale))
 
             distributions = DistributionResults.calculate_exit_probabilities(distributions)
             distribution_list.append(distributions)
@@ -119,16 +118,17 @@ class BoxAnalysis:
 
 class DistributionResults:
 
-    def __init__(self, analysis_results, bins_indices, box_density, direction, scale):
-        which_indices = [inds[0] for inds in enumerate(bins_indices) if inds[1] == box_density]
+    def __init__(self, analysis_results, bins_indices, current_box_density, direction, scale):
+        which_indices = [inds[0] for inds in enumerate(bins_indices) if inds[1] ==
+                         current_box_density]
         relevant_density_analysis_results = [analysis_results[k] for k in which_indices]
-        exit_direction = [i[3] for i in relevant_density_analysis_results]
+        exit_direction = [i[2] for i in relevant_density_analysis_results]
         final_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == direction]
         final_relevant_density_analysis_results = [relevant_density_analysis_results[k] for k in
                                                    final_indices]
-        self.length_distribution = [i[2] for i in final_relevant_density_analysis_results]
-        self.time_distribution = [i[4] for i in final_relevant_density_analysis_results]
-        self.box_density = box_density
+        self.length_distribution = [i[1] for i in final_relevant_density_analysis_results]
+        self.time_distribution = [i[3] for i in final_relevant_density_analysis_results]
+        self.box_density = current_box_density
         self.direction = direction
         self.scale = scale
         self.exit_probability = None
@@ -156,14 +156,19 @@ class DistributionResults:
 if __name__ == "__main__":
     scale_list = [2, 4, 6, 8, 10, 15, 20]
     results_dict = dict()
+    maxfiles = 5
+    filenum = 0
     for scale_size in scale_list:
         single_scale_analysis_list = []
         for file in misc.all_file_names():
             print(file)
             current_cfg = configuration.Configuration(file_name=file)
-            NewBox = BoxAnalysis(scale_size, current_cfg, 'middle', False)
+            NewBox = BoxAnalysis(scale_size, current_cfg, 'middle')
             NewBox.boxes_stats()
             single_scale_analysis_list.extend(NewBox.AnalysisResult)
+            filenum += 1
+            if filenum == maxfiles:
+                break
             # run_movie(current_cfg, current_runner, only_save=True)
         BoxAnalysis.compute_statistics(single_scale_analysis_list, scale_size)
         results_dict[scale_size] = single_scale_analysis_list
