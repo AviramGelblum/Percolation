@@ -96,23 +96,62 @@ class BoxAnalysis:
     @staticmethod
     def compute_statistics(analysis_results, scale):
         sample_size = len(analysis_results)
+        box_density = [i[0] for i in analysis_results]
+        density_bins = np.arange(0, 1.1, 0.1)
+        bins_idx = np.digitize(box_density, density_bins)
+        distribution_list = []
+        distributions = []
+        for current_box_density in range(0, len(density_bins)-1):
 
-        exit_direction = [i[3] for i in analysis_results]
+            distributions.append(DistributionResults(analysis_results, bins_idx,
+                                                     current_box_density, 'Back', scale))
 
-        sides_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == 'sides']
-        sides_distribution = [analysis_results[k] for k in sides_indices]
+            distributions.append(DistributionResults(analysis_results, bins_idx,
+                                                     current_box_density, 'Front', scale))
 
-        back_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == 'back']
-        back_distribution = [analysis_results[k] for k in back_indices]
+            distributions.append(DistributionResults(analysis_results, bins_idx,
+                                                     current_box_density, 'sides', scale))
 
-        front_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == 'front']
-        front_distribution = [analysis_results[k] for k in front_indices]
+            distributions = DistributionResults.calculate_exit_probabilities(distributions)
+            distribution_list.append(distributions)
+            distributions = []
 
-        exit_probabilities = {'front': len(front_indices)/sample_size,
-                              'sides': len(sides_indices)/sample_size,
-                              'back': len(back_indices)/sample_size}
 
-        length_distributions = {}
+class DistributionResults:
+
+    def __init__(self, analysis_results, bins_indices, box_density, direction, scale):
+        which_indices = [inds[0] for inds in enumerate(bins_indices) if inds[1] == box_density]
+        relevant_density_analysis_results = [analysis_results[k] for k in which_indices]
+        exit_direction = [i[3] for i in relevant_density_analysis_results]
+        final_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == direction]
+        final_relevant_density_analysis_results = [relevant_density_analysis_results[k] for k in
+                                                   final_indices]
+        self.length_distribution = [i[2] for i in final_relevant_density_analysis_results]
+        self.time_distribution = [i[4] for i in final_relevant_density_analysis_results]
+        self.box_density = box_density
+        self.direction = direction
+        self.scale = scale
+        self.exit_probability = None
+
+    @staticmethod
+    def calculate_exit_probabilities(object_list: list):
+        assert len(object_list) == 3
+
+        direction_list = [obj.direction for obj in object_list]
+        sorted_direction_indices = [i[0] for i in sorted(enumerate(direction_list),
+                                                         key=lambda x: x[1])]
+        assert [direction_list[i] for i in sorted_direction_indices] == ['back', 'front', 'sides']
+
+        object_list = [object_list[i] for i in sorted_direction_indices]
+        lengths = [len(obj) for obj in object_list]
+        sample_size = sum(lengths)
+        [setattr(object_list[i], 'exit_probability', lengths[i]/sample_size)
+         for i in range(0, len(object_list)-1)]
+        return object_list
+
+    def __len__(self):
+        return len(self.length_distribution)
+
 
 if __name__ == "__main__":
     scale_list = [2, 4, 6, 8, 10, 15, 20]
@@ -132,55 +171,55 @@ if __name__ == "__main__":
 
 ####################################################################################################
 
-  # def boxes(self):
-  #       if self.draw:
-  #           movie_instance = movie.Movie()
-  #           movie_instance.background([(self.cfg, "black")])
-  #       index = 0
-  #       path_var = self.cfg.path.points
-  #       result = []
-  #
-  #       while self.index_condition(index):
-  #           p = path_var[index]
-  #           box = rectangle.Rectangle(p.x, p.y - self.size / 2, p.x + self.size, p.y + self.size
-  #                                     / 2)
-  #
-  #           good = 0
-  #           times = 10
-  #           for i in range(times):
-  #               self.cfg.start = p
-  #               self.cfg.reset_runseed() #### ??? ####
-  #               r, sim_res = run.Run(run.SimulationRunner(self.cfg), containing_box=box).run()
-  #               if sim_res:
-  #                   good += 1
-  #               if self.draw:
-  #                   if sim_res:
-  #                       color = "green"
-  #                   else:
-  #                       color = "black"
-  #                       movie_instance.background([(path_var.MotionPath(r), color)])
-  #
-  #           r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
-  #           if self.draw:
-  #               if ant_res:
-  #                   color = "green"
-  #               else:
-  #                   color = "black"
-  #                   movie_instance.background([(path_var.MotionPath(r), "blue")])
-  #               box.add_text(
-  #                   '{:.0f}%,{:.0f}%'.format(BoxAnalysis.box_density(self.cfg, box) * 100,
-  #                                            good / times * 100))
-  #               movie_instance.background([(box, color)])
-  #
-  #           result.append((BoxAnalysis.box_density(self.cfg, box), ant_res, good / times))
-  #           while index < len(path_var) and path_var[index].x < box.qx:
-  #               index += 1
-  #
-  #       if self.draw:
-  #           movie_instance.save_figure(self.cfg.file_name + "_boxes")
-  #           movie_instance.close()
-  #           # movie.just_draw()
-  #       return result
+# def boxes(self):
+#       if self.draw:
+#           movie_instance = movie.Movie()
+#           movie_instance.background([(self.cfg, "black")])
+#       index = 0
+#       path_var = self.cfg.path.points
+#       result = []
+#
+#       while self.index_condition(index):
+#           p = path_var[index]
+#           box = rectangle.Rectangle(p.x, p.y - self.size / 2, p.x + self.size, p.y + self.size
+#                                     / 2)
+#
+#           good = 0
+#           times = 10
+#           for i in range(times):
+#               self.cfg.start = p
+#               self.cfg.reset_runseed() #### ??? ####
+#               r, sim_res = run.Run(run.SimulationRunner(self.cfg), containing_box=box).run()
+#               if sim_res:
+#                   good += 1
+#               if self.draw:
+#                   if sim_res:
+#                       color = "green"
+#                   else:
+#                       color = "black"
+#                       movie_instance.background([(path_var.MotionPath(r), color)])
+#
+#           r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
+#           if self.draw:
+#               if ant_res:
+#                   color = "green"
+#               else:
+#                   color = "black"
+#                   movie_instance.background([(path_var.MotionPath(r), "blue")])
+#               box.add_text(
+#                   '{:.0f}%,{:.0f}%'.format(BoxAnalysis.box_density(self.cfg, box) * 100,
+#                                            good / times * 100))
+#               movie_instance.background([(box, color)])
+#
+#           result.append((BoxAnalysis.box_density(self.cfg, box), ant_res, good / times))
+#           while index < len(path_var) and path_var[index].x < box.qx:
+#               index += 1
+#
+#       if self.draw:
+#           movie_instance.save_figure(self.cfg.file_name + "_boxes")
+#           movie_instance.close()
+#           # movie.just_draw()
+#       return result
 
 #  #######   probably needs to be taken out to run with different box analysis
 #     def all_boxes(self, dots=5):

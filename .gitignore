@@ -44,5 +44,7 @@ fabric.properties
 modules.xml
 .idea/codeStyleSettings.xml
 .idea/misc.xml
+.idea/dictionaries/aviramg.xml
 *.png
+temp.py
 *.ipr

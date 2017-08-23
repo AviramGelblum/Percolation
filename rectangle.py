@@ -3,8 +3,8 @@ from point import P
 import misc
 
 
-# p = upper left corner,
-# q = lower right corner
+# p = lower left corner,
+# q = upper right corner
 class Rectangle:
     def __init__(self, px, py, qx, qy):
         if not (px < qx and py < qy):
