@@ -47,4 +47,6 @@ modules.xml
 .idea/dictionaries/aviramg.xml
 *.png
 temp.py
+*.pickle
 *.ipr
+save.p

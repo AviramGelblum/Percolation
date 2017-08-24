@@ -4,9 +4,9 @@ import run
 import path
 import numpy as np
 import misc
+import pickle
 
 
-# noinspection PyUnboundLocalVariable
 class BoxAnalysis:
 
     def __init__(self, scale, cfg: configuration.Configuration, load_center_loc='middle'):
@@ -33,18 +33,21 @@ class BoxAnalysis:
             index = next(point[0] for point in enumerate(self.path) if point[1].x > self.size/2)
         elif self._load_center_loc == 'left':
             index = 0
+        if 'index' not in locals():
+            raise NameError
 
+        # noinspection PyUnboundLocalVariable
         while self.index_condition_entire(index):
             p = self.path[index]
             box = self.create_box(p)
             r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
             r_length = len(r)
             if r[-1].x > box.qx:
-                exit_direction = 'front'
+                exit_direction = 'Front'
             elif r[-1].x < box.px:
-                exit_direction = 'back'
+                exit_direction = 'Back'
             elif r[-1].y < box.py or r[-1].y > box.qy:
-                exit_direction = 'sides'
+                exit_direction = 'Sides'
             else:
                 exit_direction = 'error'
 
@@ -58,12 +61,13 @@ class BoxAnalysis:
                 dist_test_generator = (ind for ind in range(index+r_length-1, self.path_length)
                                        if box.px > self.path[ind].x or self.path[ind].x > box.qx or
                                        box.py > self.path[ind].y or self.path[ind].y > box.qy)
-            index = next(dist_test_generator, self.path_length)
-            print('\r' + '{} out of {}'.format(index, self.path_length), sep=' ', end=' ',
-                  flush=True)
-            # while index < len(path_var) and box.px < path_var[index].x < box.qx \
-            #         and box.py < path_var[index].y < box.qy:
-            #     index += 1
+            if 'dist_test_generator' in locals():
+                # noinspection PyUnboundLocalVariable
+                index = next(dist_test_generator, self.path_length)
+                print('\r' + '{} out of {}'.format(index, self.path_length), sep=' ', end=' ',
+                      flush=True)
+            else:
+                raise NameError
 
     def index_condition_entire(self, index):
         if self._load_center_loc == 'left':
@@ -74,7 +78,11 @@ class BoxAnalysis:
             continue_loop = index < len(self.path) and \
                 self.size / 2 < self.path[index].x < 1 - self.size / 2 and \
                 self.size / 2 < self.path[index].y < 1 - self.size / 2
-        return continue_loop
+        if 'continue_loop' in locals():
+            # noinspection PyUnboundLocalVariable
+            return continue_loop
+        else:
+            raise NameError
 
     def create_box(self, p):
         if self._load_center_loc == 'left':
@@ -82,7 +90,11 @@ class BoxAnalysis:
         elif self._load_center_loc == 'middle':
             box = rectangle.Rectangle(p.x - self.size/2, p.y - self.size/2, p.x + self.size/2,
                                       p.y + self.size/2)
-        return box
+        if 'box' in locals():
+            # noinspection PyUnboundLocalVariable
+            return box
+        else:
+            raise NameError
 
     def away_from_center_test(self, path_point, box):
         dist_list = [path_point.dist(box_point) for box_point in box]
@@ -95,32 +107,34 @@ class BoxAnalysis:
         box_density = [i[0] for i in analysis_results]
         density_bins = np.arange(0, 1.1, 0.1)
         bins_idx = np.digitize(box_density, density_bins)
+        # noinspection PyShadowingNames
         distribution_list = []
-        distributions = []
-        for current_box_density_index in range(0, density_bins.size-1):
+        for current_box_density_index in range(density_bins.size-1):
 
-            distributions.append(DistributionResults(analysis_results, bins_idx,
-                                                     density_bins[current_box_density_index],
-                                                     'Back', scale))
-
-            distributions.append(DistributionResults(analysis_results, bins_idx,
-                                                     density_bins[current_box_density_index],
-                                                     'Front', scale))
-
-            distributions.append(DistributionResults(analysis_results, bins_idx,
-                                                     density_bins[current_box_density_index],
-                                                     'sides', scale))
+            distributions = (DistributionResults(analysis_results, bins_idx,
+                                                 current_box_density_index+1,
+                                                 density_bins[current_box_density_index],
+                                                 'Back', scale),
+                             DistributionResults(analysis_results, bins_idx,
+                                                 current_box_density_index + 1,
+                                                 density_bins[current_box_density_index],
+                                                 'Front', scale),
+                             DistributionResults(analysis_results, bins_idx,
+                                                 current_box_density_index + 1,
+                                                 density_bins[current_box_density_index],
+                                                 'Sides', scale))
 
             distributions = DistributionResults.calculate_exit_probabilities(distributions)
             distribution_list.append(distributions)
-            distributions = []
+        return distribution_list
 
 
 class DistributionResults:
 
-    def __init__(self, analysis_results, bins_indices, current_box_density, direction, scale):
+    def __init__(self, analysis_results, bins_indices, current_bin_index, current_box_density,
+                 direction, scale):
         which_indices = [inds[0] for inds in enumerate(bins_indices) if inds[1] ==
-                         current_box_density]
+                         current_bin_index]
         relevant_density_analysis_results = [analysis_results[k] for k in which_indices]
         exit_direction = [i[2] for i in relevant_density_analysis_results]
         final_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == direction]
@@ -134,44 +148,58 @@ class DistributionResults:
         self.exit_probability = None
 
     @staticmethod
-    def calculate_exit_probabilities(object_list: list):
-        assert len(object_list) == 3
+    def calculate_exit_probabilities(object_tuple: tuple):
+        assert len(object_tuple) == 3
 
-        direction_list = [obj.direction for obj in object_list]
-        sorted_direction_indices = [i[0] for i in sorted(enumerate(direction_list),
-                                                         key=lambda x: x[1])]
-        assert [direction_list[i] for i in sorted_direction_indices] == ['back', 'front', 'sides']
+        direction_list = [obj.direction for obj in object_tuple]
+        # sorted_direction_indices = [i[0] for i in sorted(enumerate(direction_list),
+        #                                                  key=lambda x: x[1])]
+        assert [direction_list[i] for i in range(3)] == ['Back', 'Front', 'Sides']
 
-        object_list = [object_list[i] for i in sorted_direction_indices]
-        lengths = [len(obj) for obj in object_list]
+        lengths = [len(obj) for obj in object_tuple]
         sample_size = sum(lengths)
-        [setattr(object_list[i], 'exit_probability', lengths[i]/sample_size)
-         for i in range(0, len(object_list)-1)]
-        return object_list
+        if sample_size > 0:
+            [setattr(object_tuple[i], 'exit_probability', lengths[i]/sample_size)
+             for i in range(len(object_tuple))]
+        return object_tuple
 
     def __len__(self):
         return len(self.length_distribution)
 
+    def __eq__(self, other):
+        attribute_list = dir(self)
+        compare_attr = [self.__getattribute__(attr).__eq__(other.__getattribute__(attr)) for attr in
+                        attribute_list if attr[1] != '_']
+        if all(compare_attr):
+            return True
+        else:
+            return False
 
 if __name__ == "__main__":
-    scale_list = [2, 4, 6, 8, 10, 15, 20]
-    results_dict = dict()
-    maxfiles = 5
-    filenum = 0
+    scale_list = [1, 2, 4, 6, 8, 10, 15]
+    # scale_list = [5]
+    distribution_list = []
+    # maxfiles = 3
+    # filenum = 0
+    loadloc = 'middle'
     for scale_size in scale_list:
         single_scale_analysis_list = []
         for file in misc.all_file_names():
             print(file)
             current_cfg = configuration.Configuration(file_name=file)
-            NewBox = BoxAnalysis(scale_size, current_cfg, 'middle')
+            NewBox = BoxAnalysis(scale_size, current_cfg, loadloc)
             NewBox.boxes_stats()
             single_scale_analysis_list.extend(NewBox.AnalysisResult)
-            filenum += 1
-            if filenum == maxfiles:
-                break
+            # filenum += 1
+            # if filenum == maxfiles:
+            #     break
             # run_movie(current_cfg, current_runner, only_save=True)
-        BoxAnalysis.compute_statistics(single_scale_analysis_list, scale_size)
-        results_dict[scale_size] = single_scale_analysis_list
+        distribution_list.extend(BoxAnalysis.compute_statistics(single_scale_analysis_list,
+                                                                scale_size))
+    filename = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
+    with open(filename, 'wb') as handle:
+        pickle.dump(distribution_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     exit(0)
 
 ####################################################################################################
