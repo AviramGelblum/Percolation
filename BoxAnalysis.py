@@ -110,20 +110,13 @@ class BoxAnalysis:
         # noinspection PyShadowingNames
         distribution_list = []
         for current_box_density_index in range(density_bins.size-1):
-
-            distributions = (DistributionResults(analysis_results, bins_idx,
-                                                 current_box_density_index+1,
-                                                 density_bins[current_box_density_index],
-                                                 'Back', scale),
-                             DistributionResults(analysis_results, bins_idx,
-                                                 current_box_density_index + 1,
-                                                 density_bins[current_box_density_index],
-                                                 'Front', scale),
-                             DistributionResults(analysis_results, bins_idx,
-                                                 current_box_density_index + 1,
-                                                 density_bins[current_box_density_index],
-                                                 'Sides', scale))
-
+            which_indices = [inds[0] for inds in enumerate(bins_idx) if inds[1] ==
+                             current_box_density_index + 1]
+            relevant_density_analysis_results = [analysis_results[k] for k in which_indices]
+            distributions = tuple(DistributionResults(relevant_density_analysis_results,
+                                                      density_bins[current_box_density_index],
+                                                      string, scale)
+                                  for string in ['Back', 'Front', 'sides'])
             distributions = DistributionResults.calculate_exit_probabilities(distributions)
             distribution_list.append(distributions)
         return distribution_list
@@ -131,14 +124,10 @@ class BoxAnalysis:
 
 class DistributionResults:
 
-    def __init__(self, analysis_results, bins_indices, current_bin_index, current_box_density,
-                 direction, scale):
-        which_indices = [inds[0] for inds in enumerate(bins_indices) if inds[1] ==
-                         current_bin_index]
-        relevant_density_analysis_results = [analysis_results[k] for k in which_indices]
-        exit_direction = [i[2] for i in relevant_density_analysis_results]
+    def __init__(self, analysis_results, current_box_density,direction, scale):
+        exit_direction = [i[2] for i in analysis_results]
         final_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == direction]
-        final_relevant_density_analysis_results = [relevant_density_analysis_results[k] for k in
+        final_relevant_density_analysis_results = [analysis_results[k] for k in
                                                    final_indices]
         self.length_distribution = [i[1] for i in final_relevant_density_analysis_results]
         self.time_distribution = [i[3] for i in final_relevant_density_analysis_results]
@@ -167,9 +156,12 @@ class DistributionResults:
         return len(self.length_distribution)
 
     def __eq__(self, other):
+        if self.__class__ != DistributionResults or other.__class__ != DistributionResults:
+            raise TypeError
+
         attribute_list = dir(self)
-        compare_attr = [self.__getattribute__(attr).__eq__(other.__getattribute__(attr)) for attr in
-                        attribute_list if attr[1] != '_']
+        compare_attr = (self.__getattribute__(attr).__eq__(other.__getattribute__(attr)) for attr in
+                        attribute_list if attr[1] != '_')
         if all(compare_attr):
             return True
         else:
