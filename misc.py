@@ -20,8 +20,18 @@ def init_rand(seed=None):
     return seed
 
 
+def sign(x):
+    if x < 0:
+        return -1
+    elif x > 0:
+        return 1
+    return 0
+
+
 def rand():
     return np.random.random()
+
+
 all_colors = ["silver", "yellow", "orange", "violet", "beige", "brown", "cadetblue", "blue"]
 color_num = 0
 

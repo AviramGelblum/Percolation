@@ -14,7 +14,7 @@ class Configuration:
     Configuration possesses a draw() method used to draw these.
     """
 
-    def __init__(self, base_dir="data", file_name=None, seed=None, num_stones=0):
+    def __init__(self, base_dir="data", file_name=None, seed=None, num_stones=0, border=True):
         """
         Extract data from txt files and save in our defined classes.
 
@@ -29,8 +29,9 @@ class Configuration:
         self.file_name = file_name  # number of video
 
         # used for normalization of the data to the range 0-1
-        max_y = 1
-        min_y = 0
+        # max_y = 1
+        # min_y = 0
+        self.y_range = [0, 1]
 
         self.stones = PolygonSet()  # PolygonSet object which will contain a list of polygons
         # corresponding to the cubes
@@ -67,8 +68,8 @@ class Configuration:
                     # normalize cubes and put in Polygon objects
                     stone = Polygon([P(x / m, y / m) for x, y in misc.pairs(raw_stone)])
                     self.stones.add(stone, allow_intersecting=True)  # add to PolygonSet object
-                max_y = max(p.y for stone in self.stones for p in stone.points)
-                min_y = min(p.y for stone in self.stones for p in stone.points)
+                self.y_range[1] = max(p.y for stone in self.stones for p in stone.points)
+                self.y_range[0] = min(p.y for stone in self.stones for p in stone.points)
 
             if raw_path_values:
                 # normalize path and put in a List object
@@ -93,7 +94,7 @@ class Configuration:
 
         # Fictitious initial path for nest direction and starting point - (0,midy) to (1,midy)
         if not self.path:
-            mid_y = (max_y + min_y) / 2
+            mid_y = (sum(self.y_range)) / 2
             self.path = MotionPath([P(0, mid_y), P(1, mid_y)])
         self.start = self.path.points[0]  # Initial location of load - from data or (0,midy)
         temp = self.path.points[-1]
@@ -102,11 +103,12 @@ class Configuration:
         self.num_stones = len(self.stones.polys)  # used for command-line printing
 
         # Create border polygon objects to prevent the simulated load from wandering too far.
-        dy = self.cheerio_radius/2
-        border1 = Polygon.rectangle(P(-1, min_y - 2*dy), 2, dy)
-        border2 = Polygon.rectangle(P(-1, max_y + dy), 2, dy)
-        self.stones.add(border1, True)
-        self.stones.add(border2, True)
+        if border:
+            dy = self.cheerio_radius/2
+            border1 = Polygon.rectangle(P(-1, self.y_range[0] - 2*dy), 2, dy)
+            border2 = Polygon.rectangle(P(-1, self.y_range[1] + dy), 2, dy)
+            self.stones.add(border1, True)
+            self.stones.add(border2, True)
 
     def __str__(self):
         if self.file_name:

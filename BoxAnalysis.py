@@ -5,6 +5,7 @@ import path
 import numpy as np
 import misc
 import pickle
+import math
 
 
 class BoxAnalysis:
@@ -39,7 +40,7 @@ class BoxAnalysis:
         # noinspection PyUnboundLocalVariable
         while self.index_condition_entire(index):
             p = self.path[index]
-            box = self.create_box(p)
+            box = BoxAnalysis.create_box(p, self._load_center_loc, self.size)
             r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
             r_length = len(r)
             if r[-1].x > box.qx:
@@ -84,12 +85,15 @@ class BoxAnalysis:
         else:
             raise NameError
 
-    def create_box(self, p):
-        if self._load_center_loc == 'left':
-            box = rectangle.Rectangle(p.x, p.y - self.size/2, p.x + self.size, p.y + self.size/2)
-        elif self._load_center_loc == 'middle':
-            box = rectangle.Rectangle(p.x - self.size/2, p.y - self.size/2, p.x + self.size/2,
-                                      p.y + self.size/2)
+    @staticmethod
+    def create_box(p, load_center_loc, size):
+        if load_center_loc == 'left':
+            box = rectangle.Rectangle(p.x, p.y - size/2, p.x + size, p.y + size/2)
+        elif load_center_loc == 'middle':
+            box = rectangle.Rectangle(p.x - size/2, p.y - size/2, p.x + size/2,
+                                      p.y + size/2)
+        elif load_center_loc == 'bottom left':
+            box = rectangle.Rectangle(p.x, p.y, p.x + size, p.y + size)
         if 'box' in locals():
             # noinspection PyUnboundLocalVariable
             return box
@@ -114,9 +118,10 @@ class BoxAnalysis:
                              current_box_density_index + 1]
             relevant_density_analysis_results = [analysis_results[k] for k in which_indices]
             distributions = tuple(DistributionResults(relevant_density_analysis_results,
-                                                      density_bins[current_box_density_index],
+                                                      math.floor(density_bins[
+                                                          current_box_density_index]*10)/10,
                                                       string, scale)
-                                  for string in ['Back', 'Front', 'sides'])
+                                  for string in ['Back', 'Front', 'Sides'])
             distributions = DistributionResults.calculate_exit_probabilities(distributions)
             distribution_list.append(distributions)
         return distribution_list
@@ -124,7 +129,7 @@ class BoxAnalysis:
 
 class DistributionResults:
 
-    def __init__(self, analysis_results, current_box_density,direction, scale):
+    def __init__(self, analysis_results, current_box_density, direction, scale):
         exit_direction = [i[2] for i in analysis_results]
         final_indices = [inds[0] for inds in enumerate(exit_direction) if inds[1] == direction]
         final_relevant_density_analysis_results = [analysis_results[k] for k in
