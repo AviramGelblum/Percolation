@@ -45,6 +45,7 @@ modules.xml
 .idea/codeStyleSettings.xml
 .idea/misc.xml
 .idea/dictionaries/aviramg.xml
+.idea/inspectionProfiles/Project_Default.xml
 *.png
 temp.py
 *.pickle
