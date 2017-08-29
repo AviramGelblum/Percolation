@@ -91,6 +91,18 @@ def all_file_names():
             yield file_name[:-4]
 
 
+def file_names_by_density(density):
+    density2filename = {100: ['1110004', '1110006', '1110008', '1150001', '1150003', '1150004',
+                              '1150006', '1150007', '1150008', '1150010'],
+                        200: ['1260001'],
+                        225: ['1400008'],
+                        250: ['1380012'],
+                        275: ['1410003'],
+                        300: ['1350003']}
+    for i in density2filename[density]:
+        yield i
+
+
 def add_at_fractional_index(a, index, value):
     index1 = int(index)
     index2 = index1 + 1

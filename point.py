@@ -44,6 +44,9 @@ class P:
         except AttributeError:  # for the case where other is a constant
             return P(other * self.x, other * self.y)
 
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
