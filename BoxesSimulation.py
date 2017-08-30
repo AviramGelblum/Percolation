@@ -5,7 +5,7 @@ from point import P
 from BoxAnalysis import BoxAnalysis, DistributionResults
 import math
 import misc
-
+import movie
 
 class TiledGridSimulation:
     def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
@@ -77,10 +77,12 @@ class TiledGridSimulation:
         current_density = next(point[1] for point in self.TiledGrid
                                if point[0].dist(self.path[-1]-P(0.5*self.tile_size,
                                                                 0.5*self.tile_size)) < 10**-8)
-        current_density = math.floor(current_density*10)/10
 
+        init_density = math.floor(current_density * 10) / 10
+        # assert divmod(current_density/0.1, 1)[1] == 0
         while True:
             try:
+                current_density = math.floor(current_density * 10) / 10
                 relevant_distribution_results = next(item for item in self.distribution_list
                                                      if item[1].box_density == current_density)
                 exit_probabilities = np.append(np.array([0]), np.cumsum(np.array(
@@ -89,11 +91,18 @@ class TiledGridSimulation:
                 break
             except TypeError as e:
                 if e.args[0][51:-1] == 'NoneType':
-                    current_density -= 0.1
+                    if init_density < 0.3:
+                        current_density += 0.1
+                    else:
+                        current_density -= 0.1
+                    if current_density < 0:
+                        raise ValueError('Current Density is 0!')
                 else:
                     raise
             except StopIteration:
                 current_density -= 0.1
+                if current_density < 0:
+                    raise ValueError('Current Density is 0!')
 
         drawn = np.random.random()
         while drawn == 0:
@@ -170,7 +179,8 @@ class SimulationResults:
                 except NameError as e:
                     if e.args[0][6:19] == 'relevant_runs':
                         relevant_runs = self[i]
-
+                    else:
+                        raise
 
     def all_attributes_fit_test(self, i, attribute_list, attribute_value_list):
             attribute_list_length = len(attribute_list)
@@ -189,17 +199,31 @@ class SimulationResults:
                                  self.final_out[key], self.scale[key], self.number_of_cubes[key],
                                  self.video_number[key])
 
+    def draw_results(self, cfg: configuration.Configuration,kwargsdict=None):
+        if kwargsdict is None:
+            kwargsdict=dict()
+        draw_obj = movie.Movie()
+        draw_obj.background([(cfg, None)])
+        self.draw(**kwargsdict)
+
+    def draw(self,color='black',cmap=''):
+        """Draw one iteration"""
+        assert len(self)==1
+        if len(self)>1:
+            for i in range(0,len(self)):
+
+
 #########################################################################
 
 
 if __name__ == "__main__":
-    scale_list = [1, 2, 4, 6, 8, 10, 15]
+    scale_list = [8, 10, 15] #1, 2, 4, 6
     number_of_iterations = 50
     loadloc = 'middle'
     pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
     results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
         number_of_iterations)+'iterations'
-    cube_densities = [100, 200, 225, 250, 275, 300]
+    cube_densities = [100, 200, 225, 250, 275, 300]  #
     for tilescale in scale_list:
         for cube_density in cube_densities:
             for video_number in misc.file_names_by_density(cube_density):
@@ -220,9 +244,16 @@ if __name__ == "__main__":
                                                               cube_density, video_number)
                         else:
                             raise
-    with open(results_pickle_file_name, 'wb') as handle:
-        pickle.dump([ResultsObject, scale_list, cube_densities, number_of_iterations], handle,
-                    protocol=pickle.HIGHEST_PROTOCOL)
+                    except AttributeError:
+                        ResultsObject = SimulationResults(load_path, load_trajectory_length,
+                                                          load_time, where_out, tilescale,
+                                                          cube_density, video_number)
+        results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
+                                   '_iterations_' + str(number_of_iterations)
+        with open(results_pickle_file_name, 'wb') as handle:
+            pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations], handle,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+        ResultsObject = 1
 
 # if __name__ == "__main__":
 #     scale_list = [1, 2, 4, 6, 8, 10, 15]

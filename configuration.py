@@ -6,7 +6,6 @@ from polygon_set import PolygonSet
 from polygon import Polygon
 from circle import Circle
 
-
 class Configuration:
     """
     Configuration class defines the basic data for a specific video, extracting the data from the
@@ -117,16 +116,26 @@ class Configuration:
             f = "S=" + str(self.seed)
         return '[{},{}]'.format(f, self.num_stones)
 
-    def draw(self, ax, color):
+    def draw(self, ax, kwargsdict=None):
         """
         Method for drawing the cubes, highlighted areas around the cubes where the load center
         cannot go, and the actual trajectory path.
         This is a shell calling the actual drawing methods for the above objects.
 
         :param ax: axis object in which the drawables will be drawn
-        :param color: not used, str color input for drawing everything
+        :param kwargsdict: optional dictionary listing the colors of the different shapes to be
+        drawn
         :return:
         """
+        # color dictionaries unpacked
+        default_keys = ['ShadeColor', 'CubeColor', 'PathColor']
+        default_colors = ['lightgrey', 'red', 'blue']
+        colordict = dict(zip(default_keys, default_colors))
+        if kwargsdict is not None:
+            for key in kwargsdict.keys():
+                colordict[key] = kwargsdict[key]
+
+
         # Create areas where the load cannot go around the cube and draw them
         for stone in self.stones:
             for s in stone.segments:
@@ -143,13 +152,13 @@ class Configuration:
                 circle = Circle(s.p, self.cheerio_radius)
 
                 # Draw both types of areas for each segment
-                poly.draw(ax, "lightgrey")
-                circle.draw(ax, "lightgrey")
+                poly.draw(ax, {'color': colordict['ShadeColor']})
+                circle.draw(ax, {'color': colordict['ShadeColor']})
         # Draw cubes
         for stone in self.stones:
-            stone.draw(ax, "red")
+            stone.draw(ax, {'color': colordict['CubeColor']})
         # Draw experimental load trajectory if one exists for the current run
         if self.path:
-            self.path.draw(ax, "blue")
+            self.path.draw(ax, {'color': colordict['PathColor']})
         ax.text(0, 1.01, str(self))  # Add number of video, seed and number of stones as text
         return []

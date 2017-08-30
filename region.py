@@ -70,10 +70,17 @@ class Region:
                 res = [Region(self.p1, other.p2)]
         return res
 
-    def draw(self, ax, center=P.zero(), color="black", size=0.5):
-        a1 = S(center, center + self.p1.resize(size)).draw_arrow(ax, color)
-        a2 = S(center, center + self.p2.resize(size)).draw_arrow(ax, color)
-        a3 = patches.Arc((center.x, center.y), size, size, 0, self.p1.angle_degrees(), self.p2.angle_degrees(),color=color)
+    def draw(self, ax, center=P.zero(), size=0.5, kwargsdict=None):
+        if kwargsdict is None:
+            kwargsdict = dict()
+            color = 'black'
+        else:
+            color = kwargsdict['color']
+
+        a1 = S(center, center + self.p1.resize(size)).draw_arrow(ax, **kwargsdict)
+        a2 = S(center, center + self.p2.resize(size)).draw_arrow(ax, **kwargsdict)
+        a3 = patches.Arc((center.x, center.y), size, size, 0, self.p1.angle_degrees(),
+                         self.p2.angle_degrees(), color=color)
         ax.add_patch(a3)
         return a1 + a2 + [a3]
 

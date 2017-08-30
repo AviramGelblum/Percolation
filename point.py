@@ -161,7 +161,7 @@ class P:
     def furthest_point(self, points):
         return misc.most(points, lambda x: self.dist(x))[0]
 
-    def draw(self, ax, color, radius=0.001):
+    def draw(self, ax, radius=0.001, color='black'):
         c = matplotlib.patches.Circle((self.x, self.y), radius, lw=0, fc=color)
         ax.add_patch(c)
         return [c]

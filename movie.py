@@ -5,7 +5,8 @@ from path import MotionPath
 from rectangle import Rectangle
 from circle import Circle
 from typing import List, Tuple, Union
-Drawables = List[Tuple[Union[Configuration, MotionPath, Rectangle, Circle], str]]  # type definition
+Drawables = List[Tuple[Union[Configuration, MotionPath, Rectangle, Circle], Union[dict,None]]]
+# type definition
 
 
 class Movie:
@@ -28,13 +29,14 @@ class Movie:
         Create background image for the animation. The draw() method in configuration specifies
         drawing of a few objects: the cubes, shading around the cubes signalling where the load
         center cannot be, the real path of the load.
-        :param drawables: list of (one) tuple containing (Configuration objet, string defining
-        color)
+        :param drawables: list of (one) tuple containing (object to be drawn, string or dictionary
+        defining color/s)
         :return: No output
         """
 
-        for d, color in drawables:
-            d.draw(self.ax, color=color)
+        for d, option_dict in drawables:
+                d.draw(self.ax, option_dict)
+
 
     def just_draw(self):
         """Plotting without saving."""
@@ -63,8 +65,8 @@ class Movie:
         :return: list of objects drawn
         """
         clear = []
-        for d, color in to_draw_in_current_frame:
-            clear += d.draw(movie.ax, color)
+        for d, colordict in to_draw_in_current_frame:
+            clear += d.draw(movie.ax, colordict)
         return clear
 
     def run_animation(self, to_draw_in_current_frame, time_interval):

@@ -73,12 +73,14 @@ class GRegion:
         # direction and the region edges - that is the closest edge.
         return closest.resize(v.norm())  # resize to speed magnitude (returns velocity direction)
 
-    def draw(self, ax, color="black"):
+    def draw(self, ax, kwargsdict=None):
+        if kwargsdict is None:
+            kwargsdict = {'color': 'black'}
         # Draw all Regions in black
         res = []
         if not self.full:
             for r in self.regions:
-                res += r.draw(ax, self.center, color, self.size)
+                res += r.draw(ax, self.center, self.size, kwargsdict)
         return res
 
     def __str__(self):

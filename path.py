@@ -86,8 +86,10 @@ class MotionPath:
                 new_segments.append(current)
         self.from_segment_list(new_segments)
 
-    def draw(self, ax, color="green"):
+    def draw(self, ax, kwargsdict=None):
+        if kwargsdict is None:
+            kwargsdict = {'color': 'green'}
         res = []
         for s in self.to_segment_list():
-            res += s.draw(ax, color)
+            res += s.draw(ax, **kwargsdict)
         return res

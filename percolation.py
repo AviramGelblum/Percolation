@@ -21,13 +21,15 @@ def run_movie(cfg: configuration.Configuration, runner: run.Runner, only_plot=Fa
               only_save=False):
     """Create the video."""
     movie = Movie()
-    movie.background([(cfg, "black")])  # draws the cubes
+    movie.background([(cfg, None)])  # draws the cubes, their shade and the experimental path if
+    # there is one
     cheerios, result = run.Run(runner).run()  # runs the algorithm/analysis specified by runner
     # returns a list of points (class p) specifying the location of the load over time and a
     # boolean variable describing whether the run was successful
     print(result)
     if only_plot or only_save:
-        movie.background([(MotionPath(cheerios), "green")])  # draws the simulated load path
+        movie.background([(MotionPath(cheerios), {'color': 'green'})])
+        # draws the simulated load path
         if only_save:
             movie.save_figure(cfg.file_name + "_image")
         else:
@@ -37,7 +39,7 @@ def run_movie(cfg: configuration.Configuration, runner: run.Runner, only_plot=Fa
         to_draw = []
         # create list of tuples(Circle,str), one for each frame to be drawn in the animation
         for cheerio in cheerios:
-            to_draw.append([(circle.Circle(cheerio, cfg.cheerio_radius), "green")])
+            to_draw.append([(circle.Circle(cheerio, cfg.cheerio_radius), {'color': 'green'})])
         movie.run_animation(to_draw, 0)  # drawing the load
 
 
@@ -58,7 +60,7 @@ def run_two(cfg: configuration.Configuration):
 def just_draw_cfg(cfg: configuration.Configuration):
     print(cfg)
     movie = Movie()
-    movie.background([(cfg, "black")])
+    movie.background([(cfg, None)])
     movie.just_draw()
     exit(0)
 
@@ -119,7 +121,7 @@ def create_heat_map(times, file_name, uniquely=False):
 def read_heat_map(file_name, display=True):
     stones, cheerio, nest, path = init_stones(file_name)
     movie = Movie()
-    movie.background([(s, "green") for s in stones])
+    movie.background([(s, {'color': 'green'}) for s in stones])
     h = HeatMap()
     if not file_name:
         file_name = "tmp"
@@ -234,9 +236,9 @@ def draw_gap(file_name):
     gap, a, b = max_backwards(cfg.path.points)
     path = cfg.path.points
     movie = Movie()
-    movie.background([(cfg, "black")])
-    movie.background([(circle.Circle(path[a], cfg.cheerio_radius / 2), "green")])
-    movie.background([(circle.Circle(path[b], cfg.cheerio_radius / 2), "green")])
+    movie.background([(cfg, None)])
+    movie.background([(circle.Circle(path[a], cfg.cheerio_radius / 2), {'color': 'green'})])
+    movie.background([(circle.Circle(path[b], cfg.cheerio_radius / 2), {'color': 'green'})])
     movie.just_draw()
     exit(0)
 
@@ -318,4 +320,3 @@ exit(0)
 # create_heat_map(10, file_name)
 # read_heat_map(file_name)
 
-BoxAnalysis
