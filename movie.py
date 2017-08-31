@@ -15,8 +15,7 @@ class Movie:
     """
     def __init__(self):
         self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(0, 1),
-                                       ylim=(-0.05, 1.05))
+        self.ax = self.fig.add_subplot(111, aspect='equal', autoscale_on=False, xlim=(0, 1))
         #self.cid = self.fig.canvas.mpl_connect('button_press_event', Movie.onclick)
 
     @staticmethod
@@ -36,7 +35,6 @@ class Movie:
 
         for d, option_dict in drawables:
                 d.draw(self.ax, option_dict)
-
 
     def just_draw(self):
         """Plotting without saving."""

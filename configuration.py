@@ -128,14 +128,15 @@ class Configuration:
         :return:
         """
         # color dictionaries unpacked
-        default_keys = ['ShadeColor', 'CubeColor', 'PathColor']
-        default_colors = ['lightgrey', 'red', 'blue']
-        colordict = dict(zip(default_keys, default_colors))
+        default_keys = ['ShadeColor', 'CubeColor', 'PathColor', 'ShadeAlpha', 'CubeAlpha',
+                        'PathAlpha']
+        default_values = ['lightgrey', 'red', 'blue', 1, 1, 1]
+        colordict = dict(zip(default_keys, default_values))
         if kwargsdict is not None:
             for key in kwargsdict.keys():
                 colordict[key] = kwargsdict[key]
 
-
+        ax.set_ylim(self.y_range[0] - 0.05, self.y_range[1] + 0.05)
         # Create areas where the load cannot go around the cube and draw them
         for stone in self.stones:
             for s in stone.segments:
@@ -152,13 +153,17 @@ class Configuration:
                 circle = Circle(s.p, self.cheerio_radius)
 
                 # Draw both types of areas for each segment
-                poly.draw(ax, {'color': colordict['ShadeColor']})
-                circle.draw(ax, {'color': colordict['ShadeColor']})
+                poly.draw(ax, **{'color': colordict['ShadeColor'], 'alpha': colordict[
+                    'ShadeAlpha']})
+                circle.draw(ax, {'color': colordict['ShadeColor'], 'alpha': colordict[
+                    'ShadeAlpha']})
         # Draw cubes
         for stone in self.stones:
-            stone.draw(ax, {'color': colordict['CubeColor']})
+            stone.draw(ax, **{'color': colordict['CubeColor'],'alpha': colordict[
+                    'CubeAlpha']})
         # Draw experimental load trajectory if one exists for the current run
         if self.path:
-            self.path.draw(ax, {'color': colordict['PathColor']})
-        ax.text(0, 1.01, str(self))  # Add number of video, seed and number of stones as text
+            self.path.draw(ax, {'color': colordict['PathColor'], 'alpha': colordict['PathAlpha']})
+        ax.text(self.y_range[0] - 0.02, self.y_range[1] + 0.02, str(self))  # Add number of
+        # video, seed and number of stones as text
         return []

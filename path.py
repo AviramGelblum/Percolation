@@ -88,7 +88,7 @@ class MotionPath:
 
     def draw(self, ax, kwargsdict=None):
         if kwargsdict is None:
-            kwargsdict = {'color': 'green'}
+            kwargsdict = {'color': 'green', 'alpha': 1}
         res = []
         for s in self.to_segment_list():
             res += s.draw(ax, **kwargsdict)

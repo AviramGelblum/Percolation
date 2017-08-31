@@ -103,8 +103,8 @@ class Polygon:
     def circumference(self):
         return sum((s.length() for s in self.segments))
 
-    def draw(self, ax, color="red"):
-        poly = patches.Polygon([p.to_tuple() for p in self.points], lw=0, fc=color)
+    def draw(self, ax, color="red", alpha=1):
+        poly = patches.Polygon([p.to_tuple() for p in self.points], lw=0, fc=color,alpha=alpha)
         ax.add_patch(poly)
         return [poly]
 

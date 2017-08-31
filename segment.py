@@ -24,11 +24,11 @@ class S:
     def rotate(self, angle):
         return S(self.p.rotate(angle), self.q.rotate(angle))
 
-    def draw(self, ax, color="black", marker=None):
+    def draw(self, ax, color="black", alpha=1, marker=None):
         if marker:
             marker = "."
-        l = lines.Line2D((self.p.x, self.q.x), (self.p.y, self.q.y), color=color, ms=12,
-                         marker=marker)
+        l = lines.Line2D((self.p.x, self.q.x), (self.p.y, self.q.y), color=color, ms=12, lw=2,
+                         marker=marker, alpha=alpha)
         ax.add_line(l)
         return [l]
 
