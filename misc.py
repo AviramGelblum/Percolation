@@ -68,6 +68,10 @@ def remember(func):
     return new_func
 
 
+def RGB_255to1(color255):
+    return tuple(i/255 for i in color255)
+
+
 def most(item_list, func):
     best = None
     best_val = None
