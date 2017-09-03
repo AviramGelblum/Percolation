@@ -5,7 +5,7 @@ from path import MotionPath
 from rectangle import Rectangle
 from circle import Circle
 from typing import List, Tuple, Union
-Drawables = List[Tuple[Union[Configuration, MotionPath, Rectangle, Circle], Union[dict,None]]]
+Drawables = List[Tuple[Union[Configuration, MotionPath, Rectangle, Circle], Union[dict, None]]]
 # type definition
 
 

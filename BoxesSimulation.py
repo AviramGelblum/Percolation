@@ -7,7 +7,7 @@ import math
 import misc
 import movie
 from path import MotionPath
-import matplotlib
+import matplotlib.pyplot as plt
 
 
 class TiledGridSimulation:
@@ -168,25 +168,38 @@ class SimulationResults:
         self.video_number.append(other.video_number[0])
 
     ######################################################################
-    def compute_means_by(self, attribute_list=None, attribute_value_list=None):
-        if attribute_list.__class__ == list:
+    def compute_mean_sums_by(self, attribute_list=None, attribute_value_list=None):
+        if attribute_list.__class__ == list and attribute_value_list.__class__ == list:
             object_length = len(self)
-            indices_of_relevant_objects = [i for i in range(0, object_length) if
+            indices_of_relevant_objects = [i for i in range(object_length) if
                                            self.all_attributes_fit_test(i, attribute_list,
                                                                         attribute_value_list)]
             for i in indices_of_relevant_objects:
                 try:
                     relevant_runs.append(self[i])
                 except NameError as e:
-                    if e.args[0][6:19] == 'relevant_runs':
+                    if e.args[0][16:29] == 'relevant_runs':
                         relevant_runs = self[i]
                     else:
                         raise
+        elif attribute_list.__class__ != list:
+            raise TypeError('attribute_list is not a list!')
+        else:
+            raise TypeError('attribute_value_list is not a list')
+
+        num_of_runs = len(relevant_runs)
+        mean_total_length = np.mean([sum(relevant_runs[i].length_results[0]) for i in range(
+                                    num_of_runs)])
+        mean_total_time = np.mean([sum(relevant_runs[i].time_results[0]) for i in range(
+                                  num_of_runs)])
+        fraction_front = len(list(filter(lambda x: x == 'Front', [relevant_runs[i].final_out[0]
+                                  for i in range(num_of_runs)])))/num_of_runs
+        return mean_total_length, mean_total_time, fraction_front
 
     def all_attributes_fit_test(self, i, attribute_list, attribute_value_list):
             attribute_list_length = len(attribute_list)
             return all([getattr(self, attribute_list[j])[i].__eq__(attribute_value_list[j]) for j in
-                        range(0, attribute_list_length)])
+                        range(attribute_list_length)])
 
     def __len__(self):
         return len(self.scale)
@@ -199,9 +212,35 @@ class SimulationResults:
         return SimulationResults(self.path[key], self.length_results[key], self.time_results[key],
                                  self.final_out[key], self.scale[key], self.number_of_cubes[key],
                                  self.video_number[key])
+    @staticmethod
+    def plot_stats_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
+                            num_of_cubes, save=False, save_location=None):
 
-    def draw_results(self, cfg: configuration.Configuration, save=False, save_location=None,
-                     background_kwargs_dict=None, simulation_kwargs_dict=None):
+        save_addition = ['mean_total_length', 'mean_total_time', 'fraction_front']
+        ylabels = ['Mean Total Length', 'Mean Total Time', 'Fraction Front']
+        col = ['r', 'b', 'g']
+
+        for stat, c, ylabel, save_add in zip([mean_total_lengths, mean_total_times, fractions_front]
+                                             , col, ylabels, save_addition):
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(scale, stat, lw=2, color=c)
+            ax.set(title=ylabel + ' vs. Scale, ' + str(num_of_cubes) + ' cubes', ylabel=ylabel,
+                   xlabel='Scale [cm]')
+
+            fig_manager = plt.get_current_fig_manager()
+            fig_manager.window.showMaximized()
+            if save:
+                if save_location is None:
+                    raise ValueError('save_location must be provided')
+                fig.savefig(save_location + '_' + save_add + '_' + str(num_of_cubes) + '_cubes',
+                            bbox_inches='tight', dpi='figure')
+            else:
+                plt.show()
+
+    def draw_simulation_run(self, cfg: configuration.Configuration, save=False,
+                            save_location=None, background_kwargs_dict=None,
+                            simulation_kwargs_dict=None):
         assert len(self) == 1, 'must be a single simulation'
         if background_kwargs_dict is None:
             background_kwargs_dict = {'CubeColor': misc.RGB_255to1((139, 101, 8)), 'PathAlpha':
@@ -300,7 +339,7 @@ if __name__ == "__main__":
                                                           load_time, where_out, tilescale,
                                                           cube_density, video_number)
         results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
-                                   '_iterations_' + str(number_of_iterations)
+                                   '_iterations_' + str(number_of_iterations) + '.pickle'
         with open(results_pickle_file_name, 'wb') as handle:
             pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations], handle,
                         protocol=pickle.HIGHEST_PROTOCOL)
