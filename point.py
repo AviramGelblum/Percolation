@@ -43,12 +43,14 @@ class P:
             return self.x * other.x + self.y * other.y
         except AttributeError:  # for the case where other is a constant
             return P(other * self.x, other * self.y)
+    #
+    # def __rmul__(self, other):
+    #     return self.__mul__(other)
 
-    def __rmul__(self, other):
-        return self.__mul__(other)
+    __rmul__ = __mul__
 
     def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+        return math.isclose(self.x, other.x) and math.isclose(self.y, other.y)
 
     def to_tuple(self):
         return self.x, self.y
