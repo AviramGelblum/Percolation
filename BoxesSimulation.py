@@ -10,7 +10,9 @@ from path import MotionPath
 import matplotlib.pyplot as plt
 
 
-class TiledGridSimulation:
+####################### Base Grid Simulation Class ############################
+
+class GridSimulation:
     def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
                  max_steps=10000):
         self.video_number = video_number
@@ -25,7 +27,8 @@ class TiledGridSimulation:
         inds_of_correct_scale = [item[0] for item in enumerate(distribution_list)
                                  if item[1][1].scale == self.scale]
         self.distribution_list = [distribution_list[i] for i in inds_of_correct_scale]
-        self.TiledGrid = self.create_tiled_grid()
+        self.TiledGrid, self.actual_x_range, self.actual_y_range, self.path = \
+            self.create_tiled_grid()
         self.length_results = []
         self.time_results = []
 
@@ -34,8 +37,8 @@ class TiledGridSimulation:
                        + '.pickle'
         xbox_starts = np.arange(0, 1, self.tile_size/2)[:-2]
         ybox_starts = np.arange(self.cfg.y_range[0], self.cfg.y_range[1], self.tile_size/2)[:-2]
-        self.actual_x_range = (0.5*self.tile_size, xbox_starts[-1]+0.5*self.tile_size)
-        self.actual_y_range = (ybox_starts[0]+0.5*self.tile_size, ybox_starts[-1]+0.5*self.tile_size)
+        actual_x_range = (0.5*self.tile_size, xbox_starts[-1]+0.5*self.tile_size)
+        actual_y_range = (ybox_starts[0]+0.5*self.tile_size, ybox_starts[-1]+0.5*self.tile_size)
         # (min_val, index_min) = min((v, i) for i, v in
         #                        enumerate([math.fabs(self.cfg.path.points[0].x - num)
         #
@@ -48,7 +51,7 @@ class TiledGridSimulation:
         index_min_y = np.argmin([math.fabs(self.cfg.path.points[0].y - num) for num in
                                 ybox_starts])
 
-        self.path = [P(xbox_starts[max([index_min_x, 1])], ybox_starts[max([index_min_y, 1])])]
+        path_out = [P(xbox_starts[max([index_min_x, 1])], ybox_starts[max([index_min_y, 1])])]
 
         try:
             with open(tilefilename, 'rb') as handle:
@@ -64,23 +67,9 @@ class TiledGridSimulation:
             with open(tilefilename, 'wb') as handle:
                 pickle.dump(tiled_grid, handle, protocol=pickle.HIGHEST_PROTOCOL)
         finally:
-            return tiled_grid
+            return tiled_grid, actual_x_range, actual_y_range, path_out
 
-    def run_simulation(self):
-        current_step = 0
-        while True:
-            self.step()
-            current_step += 1
-            # print(current_step)
-            bool_res, final_out = self.is_done(current_step)
-            if bool_res:
-                return self.path, self.length_results, self.time_results, final_out
-
-    def step(self):
-        current_density = next(point[1] for point in self.TiledGrid
-                               if point[0].dist(self.path[-1]-P(0.5*self.tile_size,
-                                                                0.5*self.tile_size)) < 10**-8)
-
+    def compute_exit_probabilities_and_distributions(self,current_density):
         init_density = math.floor(current_density * 10) / 10
         # assert divmod(current_density/0.1, 1)[1] == 0
         while True:
@@ -89,8 +78,8 @@ class TiledGridSimulation:
                 relevant_distribution_results = next(item for item in self.distribution_list
                                                      if item[1].box_density == current_density)
                 exit_probabilities = np.append(np.array([0]), np.cumsum(np.array(
-                                               [relevant_distribution_results[i].exit_probability
-                                                for i in range(0, 3)])))
+                    [relevant_distribution_results[i].exit_probability
+                     for i in range(0, 3)])))
                 break
             except TypeError as e:
                 if e.args[0][51:-1] == 'NoneType':
@@ -106,23 +95,48 @@ class TiledGridSimulation:
                 current_density -= 0.1
                 if current_density < 0:
                     raise ValueError('Current Density is 0!')
+        return exit_probabilities, relevant_distribution_results
 
+    @staticmethod
+    def draw_from_distribution_results(direction, relevant_distribution_results):
+
+        relevant_distribution = next(item for item in relevant_distribution_results
+                                     if item.direction == direction)
+
+        drawn = np.random.random()
+        index = math.floor(drawn / (1 / len(relevant_distribution.length_distribution)))
+        return relevant_distribution.time_distribution[index],\
+               relevant_distribution.length_distribution[index]
+
+    def draw_from_exit_and_perform_function(self, exit_probabilities, method_to_perform,
+                                            relevant_distribution_results, *optional_parameters):
         drawn = np.random.random()
         while drawn == 0:
             drawn = np.random.random()
         direction_dict = {0: 'Back', 1: 'Front', 2: 'Sides'}
         for i in range(0, 3):
             if exit_probabilities[i] < drawn < exit_probabilities[i+1]:
-                self.draw_from_distribution_results(direction_dict[i], relevant_distribution_results)
+              method = getattr(self, method_to_perform)
+              return method(direction_dict[i], relevant_distribution_results,*optional_parameters)
 
-    def draw_from_distribution_results(self, direction, relevant_distribution_results):
+    def run_simulation(self):
+        current_step = 0
+        while True:
+            self.step()
+            current_step += 1
+            # print(current_step)
+            bool_res, final_out = self.is_done(current_step)
+            if bool_res:
+                return self.path, self.length_results, self.time_results, final_out
+
+    def step(self):
+        pass
+
+    def move(self, direction):
         add_dict = {'Back': -P(0.5*self.tile_size, 0), 'Front': P(0.5 * self.tile_size, 0),
                     'Sides': P(0, 0.5 * self.tile_size)}
-        relevant_distribution = next(item for item in relevant_distribution_results
-                                     if item.direction == direction)
-
-        if self.path[-1].x == self.tile_size/2 and direction == 'Back':
-            return
+        if math.isclose(self.path[-1].x, self.tile_size/2) and direction == 'Back':
+            return False
 
         if direction != 'Sides':
             self.path.append(self.path[-1]+add_dict[direction])
@@ -132,10 +146,7 @@ class TiledGridSimulation:
                 drawn = np.random.random()
             self.path.append(self.path[-1] + misc.sign(drawn-0.5)*add_dict[direction])
 
-        drawn = np.random.random()
-        index = math.floor(drawn/(1/len(relevant_distribution.length_distribution)))
-        self.length_results.append(relevant_distribution.length_distribution[index])
-        self.time_results.append(relevant_distribution.time_distribution[index])
+        return True
 
     def is_done(self, current_step):
         if current_step >= self.max_steps:
@@ -146,6 +157,114 @@ class TiledGridSimulation:
             return True, 'Sides'
         return False, 'Continue'
 
+
+####################### Children Simulation Classes ############################
+
+
+######### Tiled Grid Simulation ###########
+
+class TiledGridSimulation(GridSimulation):
+    def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
+                 max_steps=10000):
+        super().__init__(video_number, pickle_density_motion_file_name, tile_scale, max_steps)
+
+    def step(self):
+        current_density = next(point[1] for point in self.TiledGrid
+                               if point[0] == self.path[-1]-P(0.5*self.tile_size,
+                                                              0.5*self.tile_size))
+        exit_probabilities, relevant_distribution_results = \
+            self.compute_exit_probabilities_and_distributions(current_density)
+
+        dummy = self.draw_from_exit_and_perform_function(exit_probabilities, 'tiled_motion',
+                                                         relevant_distribution_results)
+
+    def tiled_motion(self, direction, relevant_distribution_results):
+                if self.move(direction):
+                    time_result, length_result = GridSimulation.draw_from_distribution_results(
+                                               direction, relevant_distribution_results)
+                    self.time_results.append(time_result)
+                    self.length_results.append(length_result)
+                return None
+
+
+######### Quenched Grid Simulation ###########
+
+class QuenchedGridSimulation(GridSimulation):
+    def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
+                 max_steps=10000):
+        super().__init__(video_number, pickle_density_motion_file_name, tile_scale, max_steps)
+        self.QuenchedGrid = self.quench_grid()
+        self.fix_quenched_grid()
+
+    def quench_grid(self):
+        quenched_tiled_grid = [(self.TiledGrid[i][0], self.TiledGrid[i][1]) +
+                               self.set_tile_direction(self.TiledGrid[i][1])
+                               for i in range(len(self.TiledGrid))]
+        return quenched_tiled_grid
+
+    def set_tile_direction(self, tile_density):
+        exit_probabilities, relevant_distribution_results = \
+            self.compute_exit_probabilities_and_distributions(tile_density)
+
+        return self.draw_from_exit_and_perform_function(exit_probabilities, 'quenched_setup',
+                                                        relevant_distribution_results)
+
+    @staticmethod
+    def quenched_setup(direction_dict, relevant_distribution_results):
+                time_result, length_result = GridSimulation.draw_from_distribution_results(
+                                             direction_dict, relevant_distribution_results)
+                return direction_dict, time_result, length_result
+
+    def fix_quenched_grid(self):
+        def next_x_tile_condition(tile, other_tile):
+            return math.isclose(math.fabs(tile[1] - other_tile[0].x), self.tile_size / 2) and \
+                   math.isclose(tile[2], other_tile[0].y)
+
+        tiles_to_check = [(tile[0], tile[1][0].x, tile[1][0].y, tile[1][2]) for tile in
+                          enumerate(self.QuenchedGrid) if tile[1][2] == 'Back']
+        if tiles_to_check:
+            for tile in tiles_to_check:
+                next_x_tile_generator = (True for other_tile in self.QuenchedGrid
+                                         if next_x_tile_condition(tile, other_tile))
+                fix_it = False
+                while not fix_it:
+                    try:
+                        fix_it = next(next_x_tile_generator)
+                    except StopIteration:
+                        break
+
+                if math.isclose(tile[1], 0):
+                    fix_it = True
+
+                if fix_it:
+                    dummy, relevant_distribution_results = \
+                        self.compute_exit_probabilities_and_distributions(tile[3])
+
+                    if relevant_distribution_results[2].exit_probability > 0:  # change to sides
+                        direction_to = 'Sides'
+                    else:  # change to front
+                        direction_to = 'Front'
+
+                    dummy, time_result, length_result = \
+                        QuenchedGridSimulation.quenched_setup(direction_to,
+                                                              relevant_distribution_results)
+                    self.QuenchedGrid[tile[0]] = self.QuenchedGrid[tile[0]][:2] + \
+                        (direction_to, time_result, length_result)
+
+    def step(self):
+        current_direction, time_result,\
+            length_result = next(point[2:5] for point in self.QuenchedGrid
+                                 if point[0] == self.path[-1]-P(0.5*self.tile_size,
+                                                                0.5*self.tile_size))
+
+        if self.move(current_direction):
+            self.time_results.append(time_result)
+            self.length_results.append(length_result)
+        else:
+            raise ValueError('Backwards motion assigned to x=0 tile.')
+
+
+############# Simulation Results Class ###################
 
 class SimulationResults:
     def __init__(self, path, length_results, time_results, final_out, scale, number_of_cubes,
@@ -167,7 +286,6 @@ class SimulationResults:
         self.number_of_cubes.append(other.number_of_cubes[0])
         self.video_number.append(other.video_number[0])
 
-    ######################################################################
     def compute_mean_sums_by(self, attribute_list=None, attribute_value_list=None):
         if attribute_list.__class__ == list and attribute_value_list.__class__ == list:
             object_length = len(self)
@@ -197,9 +315,8 @@ class SimulationResults:
         return mean_total_length, mean_total_time, fraction_front
 
     def all_attributes_fit_test(self, i, attribute_list, attribute_value_list):
-            attribute_list_length = len(attribute_list)
             return all([getattr(self, attribute_list[j])[i].__eq__(attribute_value_list[j]) for j in
-                        range(attribute_list_length)])
+                        range(len(attribute_list))])
 
     def __len__(self):
         return len(self.scale)
@@ -212,6 +329,7 @@ class SimulationResults:
         return SimulationResults(self.path[key], self.length_results[key], self.time_results[key],
                                  self.final_out[key], self.scale[key], self.number_of_cubes[key],
                                  self.video_number[key])
+
     @staticmethod
     def plot_stats_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
                             num_of_cubes, save=False, save_location=None):
@@ -294,7 +412,7 @@ class SimulationResults:
         for i in range(0, xmesh.shape[0]):
             for j in range(0, xmesh.shape[1]):
                 gr_generator = (k[0] for k in enumerate(tiled_grid) if
-                                k[1][0].dist(P(xmesh[i, j], ymesh[i, j])) < 10 ** -8)
+                                k[1][0] == P(xmesh[i, j], ymesh[i, j]))
                 zmesh[i, j] = tiled_grid[next(gr_generator)][1]
 
         pcm = drawing_obj.ax.pcolormesh(xmesh, ymesh, zmesh, **{'cmap': grid_dict['cmap'], 'alpha':
@@ -303,7 +421,7 @@ class SimulationResults:
 
 
 
-#########################################################################
+######### main ####################
 
 
 if __name__ == "__main__":
@@ -311,7 +429,9 @@ if __name__ == "__main__":
     number_of_iterations = 50
     loadloc = 'middle'
     pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
-    results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
+    # results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
+    #     number_of_iterations)+'iterations'
+    results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
         number_of_iterations)+'iterations'
     cube_densities = [100, 200, 225, 250, 275, 300]
     for tilescale in scale_list:
@@ -321,7 +441,9 @@ if __name__ == "__main__":
                 print(video_number)
                 for iteration in range(1, number_of_iterations+1):
                     print(iteration)
-                    sim = TiledGridSimulation(video_number, pickle_file_name, tile_scale=tilescale)
+                    # sim = TiledGridSimulation(video_number, pickle_file_name, tile_scale=tilescale)
+                    sim = QuenchedGridSimulation(video_number, pickle_file_name,
+                                                 tile_scale=tilescale)
                     load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
                     try:
                         ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
@@ -343,7 +465,7 @@ if __name__ == "__main__":
         with open(results_pickle_file_name, 'wb') as handle:
             pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations], handle,
                         protocol=pickle.HIGHEST_PROTOCOL)
-        ResultsObject = 1
+        ResultsObject = None
 
 # if __name__ == "__main__":
 #     scale_list = [1, 2, 4, 6, 8, 10, 15]
