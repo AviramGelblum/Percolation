@@ -18,8 +18,9 @@ if __name__ == "__main__":
         resobj = ResultsObject[iteration]
         save_location = 'BoxSimulation Results/SimulationResults_scale_' + str(tilescale) + \
                         '_iteration_' + str(iteration+1)
-        resobj.draw_results(configuration.Configuration(file_name=resobj.video_number[0],border=False),
-                            save=True, save_location=save_location)
+        resobj.draw_simulation_run(configuration.Configuration(file_name=resobj.video_number[0],
+                                                               border=False),
+                                   save=True, save_location=save_location)
     elif which == 'sums_vs_scale':
         mean_total_lengths, mean_total_times, fractions_front = ({cube: [] for cube in cube_counts}
                                                                  for i in range(3))
