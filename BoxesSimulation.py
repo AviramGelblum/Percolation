@@ -69,7 +69,7 @@ class GridSimulation:
         finally:
             return tiled_grid, actual_x_range, actual_y_range, path_out
 
-    def compute_exit_probabilities_and_distributions(self,current_density):
+    def compute_exit_probabilities_and_distributions(self, current_density):
         init_density = math.floor(current_density * 10) / 10
         # assert divmod(current_density/0.1, 1)[1] == 0
         while True:
@@ -106,7 +106,7 @@ class GridSimulation:
         drawn = np.random.random()
         index = math.floor(drawn / (1 / len(relevant_distribution.length_distribution)))
         return relevant_distribution.time_distribution[index],\
-               relevant_distribution.length_distribution[index]
+            relevant_distribution.length_distribution[index]
 
     def draw_from_exit_and_perform_function(self, exit_probabilities, method_to_perform,
                                             relevant_distribution_results, *optional_parameters):
@@ -116,8 +116,9 @@ class GridSimulation:
         direction_dict = {0: 'Back', 1: 'Front', 2: 'Sides'}
         for i in range(0, 3):
             if exit_probabilities[i] < drawn < exit_probabilities[i+1]:
-              method = getattr(self, method_to_perform)
-              return method(direction_dict[i], relevant_distribution_results,*optional_parameters)
+                method = getattr(self, method_to_perform)
+                return method(direction_dict[i], relevant_distribution_results,
+                              *optional_parameters)
 
     def run_simulation(self):
         current_step = 0
@@ -175,8 +176,8 @@ class TiledGridSimulation(GridSimulation):
         exit_probabilities, relevant_distribution_results = \
             self.compute_exit_probabilities_and_distributions(current_density)
 
-        dummy = self.draw_from_exit_and_perform_function(exit_probabilities, 'tiled_motion',
-                                                         relevant_distribution_results)
+        self.draw_from_exit_and_perform_function(exit_probabilities, 'tiled_motion',
+                                                 relevant_distribution_results)
 
     def tiled_motion(self, direction, relevant_distribution_results):
                 if self.move(direction):
@@ -197,63 +198,66 @@ class QuenchedGridSimulation(GridSimulation):
         self.fix_quenched_grid()
 
     def quench_grid(self):
-        quenched_tiled_grid = [(self.TiledGrid[i][0], self.TiledGrid[i][1]) +
-                               self.set_tile_direction(self.TiledGrid[i][1])
+        def set_tile_direction(tile_density):
+            exit_probabilities, relevant_distribution_results = \
+                self.compute_exit_probabilities_and_distributions(tile_density)
+            return self.draw_from_exit_and_perform_function(exit_probabilities, 'quenched_setup',
+                                                            relevant_distribution_results)
+
+        quenched_tiled_grid = [self.TiledGrid[i] + set_tile_direction(self.TiledGrid[i][1])
                                for i in range(len(self.TiledGrid))]
         return quenched_tiled_grid
 
-    def set_tile_direction(self, tile_density):
-        exit_probabilities, relevant_distribution_results = \
-            self.compute_exit_probabilities_and_distributions(tile_density)
 
-        return self.draw_from_exit_and_perform_function(exit_probabilities, 'quenched_setup',
-                                                        relevant_distribution_results)
 
     @staticmethod
-    def quenched_setup(direction_dict, relevant_distribution_results):
+    def quenched_setup(direction, relevant_distribution_results):
                 time_result, length_result = GridSimulation.draw_from_distribution_results(
-                                             direction_dict, relevant_distribution_results)
-                return direction_dict, time_result, length_result
+                                             direction, relevant_distribution_results)
+                return direction, time_result, length_result
 
     def fix_quenched_grid(self):
-        def next_x_tile_condition(tile, other_tile):
-            return math.isclose(math.fabs(tile[1] - other_tile[0].x), self.tile_size / 2) and \
+        def find_prior_x_tile(tile, other_tile):
+            return math.isclose(tile[1] - other_tile[0].x, self.tile_size / 2) and \
                    math.isclose(tile[2], other_tile[0].y)
 
-        tiles_to_check = [(tile[0], tile[1][0].x, tile[1][0].y, tile[1][2]) for tile in
+        tiles_to_check = [(tile[0], tile[1][0].x, tile[1][0].y, tile[1][1]) for tile in
                           enumerate(self.QuenchedGrid) if tile[1][2] == 'Back']
         if tiles_to_check:
             for tile in tiles_to_check:
-                next_x_tile_generator = (True for other_tile in self.QuenchedGrid
-                                         if next_x_tile_condition(tile, other_tile))
-                fix_it = False
-                while not fix_it:
-                    try:
-                        fix_it = next(next_x_tile_generator)
-                    except StopIteration:
-                        break
 
+                fix_it = False
                 if math.isclose(tile[1], 0):
                     fix_it = True
 
-                if fix_it:
-                    dummy, relevant_distribution_results = \
-                        self.compute_exit_probabilities_and_distributions(tile[3])
+                if not fix_it:
+                    prior_x_tile_generator = (other_tile for other_tile in self.QuenchedGrid
+                                              if find_prior_x_tile(tile, other_tile))
+                    try:
+                        prior_tile = next(prior_x_tile_generator)
+                        fix_it = prior_tile[2] == 'Front'
+                    except StopIteration:
+                        raise ValueError('Found x<0 as prior tile!')
 
-                    if relevant_distribution_results[2].exit_probability > 0:  # change to sides
+                if fix_it:
+                    relevant_distribution_results = \
+                        self.compute_exit_probabilities_and_distributions(tile[3])[1]
+
+                    if relevant_distribution_results[2].exit_probability >= \
+                            relevant_distribution_results[1].exit_probability:  # change to sides
                         direction_to = 'Sides'
                     else:  # change to front
                         direction_to = 'Front'
 
-                    dummy, time_result, length_result = \
-                        QuenchedGridSimulation.quenched_setup(direction_to,
-                                                              relevant_distribution_results)
+                    time_result, length_result = \
+                        QuenchedGridSimulation.quenched_setup(
+                            direction_to, relevant_distribution_results)[1:]
                     self.QuenchedGrid[tile[0]] = self.QuenchedGrid[tile[0]][:2] + \
                         (direction_to, time_result, length_result)
 
     def step(self):
         current_direction, time_result,\
-            length_result = next(point[2:5] for point in self.QuenchedGrid
+            length_result = next(point[2:] for point in self.QuenchedGrid
                                  if point[0] == self.path[-1]-P(0.5*self.tile_size,
                                                                 0.5*self.tile_size))
 
@@ -431,8 +435,8 @@ if __name__ == "__main__":
     pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
     # results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
     #     number_of_iterations)+'iterations'
-    results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
-        number_of_iterations)+'iterations'
+    # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
+    #     number_of_iterations)+'iterations'
     cube_densities = [100, 200, 225, 250, 275, 300]
     for tilescale in scale_list:
         for cube_density in cube_densities:
@@ -460,8 +464,11 @@ if __name__ == "__main__":
                         ResultsObject = SimulationResults(load_path, load_trajectory_length,
                                                           load_time, where_out, tilescale,
                                                           cube_density, video_number)
-        results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
-                                   '_iterations_' + str(number_of_iterations) + '.pickle'
+        # results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
+        #                            '_iterations_' + str(number_of_iterations) + '.pickle'
+        results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
+                                   + '_iterations_' + str(number_of_iterations) + '.pickle'
+
         with open(results_pickle_file_name, 'wb') as handle:
             pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations], handle,
                         protocol=pickle.HIGHEST_PROTOCOL)
