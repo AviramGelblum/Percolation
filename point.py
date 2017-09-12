@@ -50,7 +50,8 @@ class P:
     __rmul__ = __mul__
 
     def __eq__(self, other):
-        return math.isclose(self.x, other.x) and math.isclose(self.y, other.y)
+        return math.isclose(self.x, other.x, abs_tol=1e-14) \
+               and math.isclose(self.y, other.y, abs_tol=1e-14)
 
     def to_tuple(self):
         return self.x, self.y
