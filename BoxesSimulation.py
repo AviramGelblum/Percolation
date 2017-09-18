@@ -40,15 +40,15 @@ class GridSimulation:
         actual_x_range = (0.5*self.tile_size, xbox_starts[-1]+0.5*self.tile_size)
         actual_y_range = (ybox_starts[0]+0.5*self.tile_size, ybox_starts[-1]+0.5*self.tile_size)
         # (min_val, index_min) = min((v, i) for i, v in
-        #                        enumerate([math.fabs(self.cfg.path.points[0].x - num)
+        #                        enumerate([abs(self.cfg.path.points[0].x - num)
         #
         #                                    for num in xbox_starts]))
         # import operator
         # min_index, min_value = min(enumerate(values), key=operator.itemgetter(1))
 
-        index_min_x = np.argmin([math.fabs(self.cfg.path.points[0].x - num) for num in
+        index_min_x = np.argmin([abs(self.cfg.path.points[0].x - num) for num in
                                 xbox_starts])
-        index_min_y = np.argmin([math.fabs(self.cfg.path.points[0].y - num) for num in
+        index_min_y = np.argmin([abs(self.cfg.path.points[0].y - num) for num in
                                 ybox_starts])
 
         path_out = [P(xbox_starts[max([index_min_x, 1])], ybox_starts[max([index_min_y, 1])])]
@@ -209,7 +209,6 @@ class QuenchedGridSimulation(GridSimulation):
         return quenched_tiled_grid
 
 
-
     @staticmethod
     def quenched_setup(direction, relevant_distribution_results):
                 time_result, length_result = GridSimulation.draw_from_distribution_results(
@@ -268,6 +267,77 @@ class QuenchedGridSimulation(GridSimulation):
             raise ValueError('Backwards motion assigned to x=0 tile.')
 
 
+############ Quenched Simulation with mid-trail bias #######
+
+class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
+
+    def __init__(self, video_number, pickle_density_motion_file_name,
+                 bias_values=('constant', None), trail_bias_file_name=None, tile_scale=1,
+                 max_steps=10000):
+        super(QuenchedGridTrailBiasSimulation, self).__init__(video_number,
+                    pickle_density_motion_file_name, tile_scale, max_steps)
+        self.bias_values = bias_values  # tuple(bias_type, max_probability (constant bias), dist,
+        # added_probability) where for bias_type 'hooke', for a given distance from trail center (
+        # dist, in cm) we add added_probability to the bias towards the trail. Calculated using
+        # self.cfg.cheerio_radius as the simulation_units to cm conversion rate,
+        # in calculate_trail_bias(). max_probability is the maximum bias towards center (bias
+        # saturation). constant bias is the bias we add in case bias_type is 'constant'.
+        self.trail_bias_file_name = trail_bias_file_name
+
+    def move(self, direction):
+        add_dict = {'Back': -P(0.5 * self.tile_size, 0), 'Front': P(0.5 * self.tile_size, 0),
+                    'Sides': P(0, 0.5 * self.tile_size)}
+        if math.isclose(self.path[-1].x, self.tile_size / 2) and direction == 'Back':
+            return False
+
+        if direction != 'Sides':
+            self.path.append(self.path[-1] + add_dict[direction])
+        else:
+            go_down_chance = self.calculate_trail_bias()
+            drawn = np.random.random()
+            while drawn == go_down_chance:
+                drawn = np.random.random()
+            self.path.append(self.path[-1] + misc.sign(drawn - go_down_chance) * add_dict[
+                direction])
+
+        return True
+
+    def calculate_trail_bias(self):
+        y_diff = self.path[-1].y - self.path[0].y
+        bias_direction = -misc.sign(y_diff)
+        if bias_direction == 0:
+            return 0.5
+
+        if self.bias_values[0] == 'constant':
+            if self.bias_values[1]:
+                if bias_direction > 0:
+                    return 1-self.bias_values[1]
+                else:
+                    return self.bias_values[1]
+            else:
+                raise ValueError('trail_bias_in must be supplied.')
+        elif self.bias_values[0] == 'hooke':
+            if self.bias_values[1]:
+                hooke_coef = self.bias_values[3]\
+                             / (self.bias_values[2] * self.cfg.cheerio_radius)
+                if bias_direction > 0:
+                    return 1-min(0.5 + hooke_coef * abs(y_diff), self.bias_values[1])
+                else:
+                    return min(0.5 + hooke_coef * abs(y_diff), self.bias_values[1])
+            else:
+                raise ValueError('trail_bias_in and bias_values must be supplied.')
+        elif self.bias_values[0] == 'data':
+            if self.trail_bias_file_name:
+                with open(self.trail_bias_file_name, 'r') as handle:
+                    pass
+                raise BaseException('Not implemented yet. Lazy bum!')
+            else:
+                raise ValueError('trail_bias_file_name must be supplied.')
+        else:
+            raise ValueError('bias type must take one of the following values: \n constant, '
+                             'hooke, data.')
+
+
 ############# Simulation Results Class ###################
 
 class SimulationResults:
@@ -290,7 +360,7 @@ class SimulationResults:
         self.number_of_cubes.append(other.number_of_cubes[0])
         self.video_number.append(other.video_number[0])
 
-    def compute_mean_sums_by(self, attribute_list=None, attribute_value_list=None):
+    def get_relevant_runs(self,attribute_list=None, attribute_value_list=None):
         if attribute_list.__class__ == list and attribute_value_list.__class__ == list:
             object_length = len(self)
             indices_of_relevant_objects = [i for i in range(object_length) if
@@ -308,19 +378,25 @@ class SimulationResults:
             raise TypeError('attribute_list is not a list!')
         else:
             raise TypeError('attribute_value_list is not a list')
-
-        num_of_runs = len(relevant_runs)
-        mean_total_length = np.mean([sum(relevant_runs[i].length_results[0]) for i in range(
-                                    num_of_runs)])
-        mean_total_time = np.mean([sum(relevant_runs[i].time_results[0]) for i in range(
-                                  num_of_runs)])
-        fraction_front = len(list(filter(lambda x: x == 'Front', [relevant_runs[i].final_out[0]
-                                  for i in range(num_of_runs)])))/num_of_runs
-        return mean_total_length, mean_total_time, fraction_front
+        return relevant_runs
 
     def all_attributes_fit_test(self, i, attribute_list, attribute_value_list):
             return all([getattr(self, attribute_list[j])[i].__eq__(attribute_value_list[j]) for j in
                         range(len(attribute_list))])
+
+    @staticmethod
+    def compute_mean_and_median_sums(relevant_runs):
+        num_of_runs = len(relevant_runs)
+        sum_length = [sum(relevant_runs[i].length_results[0]) for i in range(num_of_runs)]
+        sum_time = [sum(relevant_runs[i].time_results[0]) for i in range(num_of_runs)]
+        mean_total_length = np.mean(sum_length)
+        median_total_length = np.median(sum_length)
+        mean_total_time = np.mean(sum_time)
+        median_total_time = np.median(sum_time)
+        fraction_front = len(list(filter(lambda x: x == 'Front', [relevant_runs[i].final_out[0]
+                                  for i in range(num_of_runs)])))/num_of_runs
+        return fraction_front, mean_total_length, mean_total_time, \
+               median_total_length, median_total_time, \
 
     def __len__(self):
         return len(self.scale)
@@ -335,9 +411,8 @@ class SimulationResults:
                                  self.video_number[key])
 
     @staticmethod
-    def plot_stats_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
+    def plot_means_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
                             num_of_cubes, save=False, save_location=None):
-
         save_addition = ['mean_total_length', 'mean_total_time', 'fraction_front']
         ylabels = ['Mean Total Length', 'Mean Total Time', 'Fraction Front']
         col = ['r', 'b', 'g']
@@ -349,6 +424,42 @@ class SimulationResults:
             ax.plot(scale, stat, lw=2, color=c)
             ax.set(title=ylabel + ' vs. Scale, ' + str(num_of_cubes) + ' cubes', ylabel=ylabel,
                    xlabel='Scale [cm]')
+
+            fig_manager = plt.get_current_fig_manager()
+            fig_manager.window.showMaximized()
+            if save:
+                if save_location is None:
+                    raise ValueError('save_location must be provided')
+                fig.savefig(save_location + '_' + save_add + '_' + str(num_of_cubes) + '_cubes',
+                            bbox_inches='tight', dpi='figure')
+            else:
+                plt.show()
+
+    @staticmethod
+    def plot_boxplots_vs_scale(relevant_runs, scale, num_of_cubes, save=False, save_location=None):
+        save_addition = ['total_length', 'total_time']
+        ylabels = ['Total Length', 'Total Time']
+        col = ['r', 'b']
+        num_of_scales = len(relevant_runs)
+        sum_length = []
+        sum_time = []
+        for i in range(num_of_scales):
+            sum_length_temp = []
+            sum_time_temp = []
+            for k in range(len(relevant_runs[i])):
+                sum_length_temp.append(sum(relevant_runs[i][k].length_results[0]))
+                sum_time_temp.append(sum(relevant_runs[i][k].time_results[0]))
+            sum_length.append(sum_length_temp)
+            sum_time.append(sum_time_temp)
+
+        for stat, c, ylabel, save_add in zip([sum_length, sum_time], col, ylabels, save_addition):
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.boxplot(stat, whis=[20, 80])
+            ax.set(title=ylabel + ' vs. Scale, ' + str(num_of_cubes) + ' cubes', ylabel=ylabel,
+                   xlabel='Scale [cm]')
+            ax.xaxis.set_ticklabels(scale)
 
             fig_manager = plt.get_current_fig_manager()
             fig_manager.window.showMaximized()
@@ -424,7 +535,6 @@ class SimulationResults:
         drawing_obj.fig.colorbar(pcm)
 
 
-
 ######### main ####################
 
 
@@ -438,6 +548,8 @@ if __name__ == "__main__":
     # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
     #     number_of_iterations)+'iterations'
     cube_densities = [100, 200, 225, 250, 275, 300]
+    # bias_values = ('constant', 0.75)
+    bias_values = ('hooke', 0.8, 10, 0.3)
     for tilescale in scale_list:
         for cube_density in cube_densities:
             for video_number in misc.file_names_by_density(cube_density):
@@ -446,8 +558,11 @@ if __name__ == "__main__":
                 for iteration in range(1, number_of_iterations+1):
                     print(iteration)
                     # sim = TiledGridSimulation(video_number, pickle_file_name, tile_scale=tilescale)
-                    sim = QuenchedGridSimulation(video_number, pickle_file_name,
-                                                 tile_scale=tilescale)
+                    # sim = QuenchedGridSimulation(video_number, pickle_file_name,
+                    #                              tile_scale=tilescale)
+                    sim = QuenchedGridTrailBiasSimulation(video_number, pickle_file_name,
+                                                          bias_values, tile_scale=tilescale)
+
                     load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
                     try:
                         ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
@@ -466,11 +581,13 @@ if __name__ == "__main__":
                                                           cube_density, video_number)
         # results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
         #                            '_iterations_' + str(number_of_iterations) + '.pickle'
-        results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
-                                   + '_iterations_' + str(number_of_iterations) + '.pickle'
-
+        # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
+        #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
+        results_pickle_file_name = 'Pickle Files/QuenchedMidBiasSimulationResults_Scale_' + str(
+            tilescale) + '_iterations_' + str(number_of_iterations) + '.pickle'
         with open(results_pickle_file_name, 'wb') as handle:
-            pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations], handle,
+            pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations,
+                         bias_values], handle,
                         protocol=pickle.HIGHEST_PROTOCOL)
         ResultsObject = None
 
