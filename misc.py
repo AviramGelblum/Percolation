@@ -89,6 +89,11 @@ def pairs(l):
         yield l[2*i], l[2*i+1]
 
 
+def zipdic(*dcts):
+    for i in set(dcts[0]).intersection(*dcts[1:]):
+        yield (i,) + tuple(d[i] for d in dcts)
+
+
 def all_file_names():
     for file_name in os.listdir(os.getcwd() + "/data"):
         if file_name[-4:] == ".txt" and len(file_name) == 11:
