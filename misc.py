@@ -15,7 +15,7 @@ import scipy.stats as sct
 def init_rand(seed=None):
     """Return random seed if seed is not defined. Seed the RNG"""
     if not seed:
-        seed = np.random.random_integers(1000000)
+        seed = np.random.random_integers(10000000)
     np.random.seed(seed)
     return seed
 
@@ -92,6 +92,11 @@ def pairs(l):
 def zipdic(*dcts):
     for i in set(dcts[0]).intersection(*dcts[1:]):
         yield (i,) + tuple(d[i] for d in dcts)
+
+
+def yield_rand(n):
+    for dummy in range(n):
+        yield np.random.random_integers(10000000)
 
 
 def all_file_names():
