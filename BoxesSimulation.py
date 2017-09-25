@@ -370,6 +370,7 @@ class SimulationResults:
         if video_number:
             self.video_number = [video_number]
         else:
+            self.video_number = None
             self.seed = [seed]
 
     def append(self, other):
@@ -379,12 +380,12 @@ class SimulationResults:
         self.final_out.append(other.final_out[0])
         self.scale.append(other.scale[0])
         self.number_of_cubes.append(other.number_of_cubes[0])
-        if video_number:
+        if self.video_number:
             self.video_number.append(other.video_number[0])
         else:
             self.seed.append(other.seed[0])
 
-    def get_relevant_runs(self,attribute_list=None, attribute_value_list=None):
+    def get_relevant_runs(self, attribute_list=None, attribute_value_list=None):
         if attribute_list.__class__ == list and attribute_value_list.__class__ == list:
             object_length = len(self)
             indices_of_relevant_objects = [i for i in range(object_length) if
@@ -418,9 +419,10 @@ class SimulationResults:
         mean_total_time = np.mean(sum_time)
         median_total_time = np.median(sum_time)
         fraction_front = len(list(filter(lambda x: x == 'Front', [relevant_runs[i].final_out[0]
-                                  for i in range(num_of_runs)])))/num_of_runs
+                             for i in range(num_of_runs)])))/num_of_runs
         return fraction_front, mean_total_length, mean_total_time, \
-               median_total_length, median_total_time, \
+            median_total_length, median_total_time
+
 
     def __len__(self):
         return len(self.scale)
@@ -645,9 +647,11 @@ if __name__ == "__main__":
     number_of_mazes_per_density = 30
     # bias_values = ('constant', 0.75)
     bias_values = ('hooke', 0.8, 10, 0.3)
+    seed_lists = [[seed for seed in misc.yield_rand(number_of_mazes_per_density)] for i in range(
+                 len(cube_densities))]
     for tilescale in scale_list:
-        for cube_density in cube_densities:
-            for seed in misc.yield_rand(number_of_mazes_per_density):
+        for cube_density, seed_list in zip(cube_densities, seed_lists):
+            for seed in seed_list:
                 print('scale = ' + str(tilescale))
                 print('seed = ' + str(seed))
                 for iteration in range(1, number_of_iterations+1):
