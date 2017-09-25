@@ -81,7 +81,7 @@ class Configuration:
             self.stone_size = self.stones.polys[-1].segments[0].length()
             self.cheerio_radius = self.stone_size / 0.7
         else:
-            real_boardy = 64
+            real_boardy = 68  # Yoav used 64 for some reason
             real_boardx = 48
             self.cheerio_radius = 1 / real_boardy
             self.stone_size = self.cheerio_radius * 0.7

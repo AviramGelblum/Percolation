@@ -13,10 +13,20 @@ import matplotlib.pyplot as plt
 ####################### Base Grid Simulation Class ############################
 
 class GridSimulation:
-    def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
-                 max_steps=10000):
+    def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
+                 num_stones=None, tile_scale=1, max_steps=10000):
         self.video_number = video_number
-        self.cfg = configuration.Configuration(file_name=self.video_number, border=False)
+        self.num_stones = num_stones
+
+        if video_number:
+            self.cfg = configuration.Configuration(file_name=self.video_number, border=False)
+        else:
+            # no video number specified, cfg uses random seed or given seed if specified
+            if num_stones:
+                self.cfg = configuration.Configuration(seed=seed, num_stones=self.num_stones, border=False)
+            else:
+                raise ValueError('number of cubes (num_stones parameter) must be specified')
+
         self.scale = tile_scale
         self.tile_size = self.scale * self.cfg.cheerio_radius
         self.max_steps = max_steps
@@ -33,8 +43,14 @@ class GridSimulation:
         self.time_results = []
 
     def create_tiled_grid(self):
-        tilefilename = 'Tiled Grids/' + self.video_number + '_grid_scale_' + str(self.scale) \
+        if self.video_number:
+            tilefilename = 'Tiled Grids/' + self.video_number + '_grid_scale_' + str(self.scale) \
                        + '.pickle'
+        else:
+            tilefilename = 'Tiled Grids/seed_' + str(self.cfg.seed) + '_grid_scale_' \
+                           + str(self.scale) + '_num_cubes_' + str(self.num_stones) \
+                           + '.pickle'
+
         xbox_starts = np.arange(0, 1, self.tile_size/2)[:-2]
         ybox_starts = np.arange(self.cfg.y_range[0], self.cfg.y_range[1], self.tile_size/2)[:-2]
         actual_x_range = (0.5*self.tile_size, xbox_starts[-1]+0.5*self.tile_size)
@@ -165,9 +181,10 @@ class GridSimulation:
 ######### Tiled Grid Simulation ###########
 
 class TiledGridSimulation(GridSimulation):
-    def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
-                 max_steps=10000):
-        super().__init__(video_number, pickle_density_motion_file_name, tile_scale, max_steps)
+    def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
+                 num_stones=None, tile_scale=1, max_steps=10000):
+        super().__init__(pickle_density_motion_file_name, video_number, seed, num_stones,
+                         tile_scale, max_steps)
 
     def step(self):
         current_density = next(point[1] for point in self.TiledGrid
@@ -191,9 +208,10 @@ class TiledGridSimulation(GridSimulation):
 ######### Quenched Grid Simulation ###########
 
 class QuenchedGridSimulation(GridSimulation):
-    def __init__(self, video_number, pickle_density_motion_file_name, tile_scale=1,
-                 max_steps=10000):
-        super().__init__(video_number, pickle_density_motion_file_name, tile_scale, max_steps)
+    def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
+                 num_stones=None,  tile_scale=1, max_steps=10000):
+        super().__init__(pickle_density_motion_file_name, video_number, seed, num_stones,
+                         tile_scale, max_steps)
         self.QuenchedGrid = self.quench_grid()
         self.fix_quenched_grid()
 
@@ -271,11 +289,11 @@ class QuenchedGridSimulation(GridSimulation):
 
 class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
 
-    def __init__(self, video_number, pickle_density_motion_file_name,
-                 bias_values=('constant', None), trail_bias_file_name=None, tile_scale=1,
-                 max_steps=10000):
-        super(QuenchedGridTrailBiasSimulation, self).__init__(video_number,
-                    pickle_density_motion_file_name, tile_scale, max_steps)
+    def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
+                 trail_bias_file_name=None, video_number=None, seed=None, num_stones=None,
+                 tile_scale=1, max_steps=10000):
+        super(QuenchedGridTrailBiasSimulation, self).__init__(pickle_density_motion_file_name,
+              video_number, seed, num_stones, tile_scale, max_steps)
         self.bias_values = bias_values  # tuple(bias_type, max_probability (constant bias), dist,
         # added_probability) where for bias_type 'hooke', for a given distance from trail center (
         # dist, in cm) we add added_probability to the bias towards the trail. Calculated using
@@ -315,7 +333,7 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
                 else:
                     return self.bias_values[1]
             else:
-                raise ValueError('trail_bias_in must be supplied.')
+                raise ValueError('bias_values must be supplied.')
         elif self.bias_values[0] == 'hooke':
             if self.bias_values[1]:
                 hooke_coef = self.bias_values[3]\
@@ -325,7 +343,7 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
                 else:
                     return min(0.5 + hooke_coef * abs(y_diff), self.bias_values[1])
             else:
-                raise ValueError('trail_bias_in and bias_values must be supplied.')
+                raise ValueError('bias_values must be supplied.')
         elif self.bias_values[0] == 'data':
             if self.trail_bias_file_name:
                 with open(self.trail_bias_file_name, 'r') as handle:
@@ -342,14 +360,17 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
 
 class SimulationResults:
     def __init__(self, path, length_results, time_results, final_out, scale, number_of_cubes,
-                 video_number):
+                 video_number=None, seed=None):
         self.path = [path]
         self.length_results = [length_results]
         self.time_results = [time_results]
         self.final_out = [final_out]
         self.scale = [scale]
         self.number_of_cubes = [number_of_cubes]
-        self.video_number = [video_number]
+        if video_number:
+            self.video_number = [video_number]
+        else:
+            self.seed = [seed]
 
     def append(self, other):
         self.path.append(other.path[0])
@@ -358,7 +379,10 @@ class SimulationResults:
         self.final_out.append(other.final_out[0])
         self.scale.append(other.scale[0])
         self.number_of_cubes.append(other.number_of_cubes[0])
-        self.video_number.append(other.video_number[0])
+        if video_number:
+            self.video_number.append(other.video_number[0])
+        else:
+            self.seed.append(other.seed[0])
 
     def get_relevant_runs(self,attribute_list=None, attribute_value_list=None):
         if attribute_list.__class__ == list and attribute_value_list.__class__ == list:
@@ -406,10 +430,14 @@ class SimulationResults:
             yield self[i]
 
     def __getitem__(self, key):
-        return SimulationResults(self.path[key], self.length_results[key], self.time_results[key],
-                                 self.final_out[key], self.scale[key], self.number_of_cubes[key],
-                                 self.video_number[key])
-
+        if self.video_number:
+            return SimulationResults(self.path[key], self.length_results[key],
+                                     self.time_results[key], self.final_out[key], self.scale[key],
+                                     self.number_of_cubes[key], self.video_number[key])
+        else:
+            return SimulationResults(self.path[key], self.length_results[key],
+                                     self.time_results[key], self.final_out[key], self.scale[key],
+                                     self.number_of_cubes[key], self.seed[key])
     @staticmethod
     def plot_means_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
                             num_of_cubes, save=False, save_location=None):
@@ -511,9 +539,13 @@ class SimulationResults:
         current_path = MotionPath(current_sim.path[0])
         current_path.draw(drawing_obj.ax, {'color': simulation_path_dict['PathColor'],
                                            'alpha': simulation_path_dict['alpha']})
-
-        tilefilename = 'Tiled Grids/' + self.video_number[0] + '_grid_scale_' + str(self.scale[0]) \
-                       + '.pickle'
+        if self.video_number:
+            tilefilename = 'Tiled Grids/' + self.video_number[0] + '_grid_scale_' + str(self.scale[0]) \
+                           + '.pickle'
+        else:
+            tilefilename = 'Tiled Grids/seed_' + str(self.seed[0]) + '_grid_scale_' \
+                           + str(self.scale[0]) + '_num_cubes_' + str(self.number_of_cubes[0]) \
+                           + '.pickle'
         with open(tilefilename, 'rb') as handle:
             tiled_grid = pickle.load(handle)
 
@@ -538,7 +570,10 @@ class SimulationResults:
 ######### main ####################
 
 
-if __name__ == "__main__":
+############## cube mazes from data #############
+
+if 0:  # __name__ == "__main__":
+
     scale_list = [1, 2, 4, 6, 8, 10, 15]
     number_of_iterations = 50
     loadloc = 'middle'
@@ -557,22 +592,26 @@ if __name__ == "__main__":
                 print(video_number)
                 for iteration in range(1, number_of_iterations+1):
                     print(iteration)
-                    # sim = TiledGridSimulation(video_number, pickle_file_name, tile_scale=tilescale)
-                    # sim = QuenchedGridSimulation(video_number, pickle_file_name,
+                    # sim = TiledGridSimulation(pickle_file_name, video_number=video_number,
+                    #                           tile_scale=tilescale)
+                    # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
                     #                              tile_scale=tilescale)
-                    sim = QuenchedGridTrailBiasSimulation(video_number, pickle_file_name,
-                                                          bias_values, tile_scale=tilescale)
+                    sim = QuenchedGridTrailBiasSimulation(pickle_file_name, bias_values,
+                                                          video_number=video_number,
+                                                          tile_scale=tilescale)
 
                     load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
                     try:
                         ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
                                                                load_time, where_out, tilescale,
-                                                               cube_density, video_number))
+                                                               cube_density,
+                                                               video_number=video_number))
                     except NameError as e:
                         if e.args[0][6:19] == 'ResultsObject':
                             ResultsObject = SimulationResults(load_path, load_trajectory_length,
                                                               load_time, where_out, tilescale,
-                                                              cube_density, video_number)
+                                                              cube_density,
+                                                              video_number=video_number)
                         else:
                             raise
                     except AttributeError:
@@ -585,6 +624,66 @@ if __name__ == "__main__":
         #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
         results_pickle_file_name = 'Pickle Files/QuenchedMidBiasSimulationResults_Scale_' + str(
             tilescale) + '_iterations_' + str(number_of_iterations) + '.pickle'
+        with open(results_pickle_file_name, 'wb') as handle:
+            pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations,
+                         bias_values], handle,
+                        protocol=pickle.HIGHEST_PROTOCOL)
+        ResultsObject = None
+
+##################### simulated cubes ############
+
+if __name__ == "__main__":
+    scale_list = [1, 2, 4, 6, 8, 10, 15]
+    number_of_iterations = 75
+    loadloc = 'middle'
+    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
+    # results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
+    #     number_of_iterations)+'iterations'
+    # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
+    #     number_of_iterations)+'iterations'
+    cube_densities = [100, 150, 200, 225, 250, 275, 300, 400]
+    number_of_mazes_per_density = 30
+    # bias_values = ('constant', 0.75)
+    bias_values = ('hooke', 0.8, 10, 0.3)
+    for tilescale in scale_list:
+        for cube_density in cube_densities:
+            for seed in misc.yield_rand(number_of_mazes_per_density):
+                print('scale = ' + str(tilescale))
+                print('seed = ' + str(seed))
+                for iteration in range(1, number_of_iterations+1):
+                    print(iteration)
+                    # sim = TiledGridSimulation(pickle_file_name, video_number=video_number,
+                    #                           tile_scale=tilescale)
+                    # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
+                    #                              tile_scale=tilescale)
+                    sim = QuenchedGridTrailBiasSimulation(pickle_file_name, bias_values,
+                                                          seed=seed, num_stones=cube_density,
+                                                          tile_scale=tilescale)
+
+                    load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
+                    try:
+                        ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
+                                                               load_time, where_out, tilescale,
+                                                               cube_density, seed=seed))
+                    except NameError as e:
+                        if e.args[0][6:19] == 'ResultsObject':
+                            ResultsObject = SimulationResults(load_path, load_trajectory_length,
+                                                              load_time, where_out, tilescale,
+                                                              cube_density, seed=seed)
+                        else:
+                            raise
+                    except AttributeError:
+                        ResultsObject = SimulationResults(load_path, load_trajectory_length,
+                                                          load_time, where_out, tilescale,
+                                                          cube_density, seed=seed)
+        # results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
+        #                            '_iterations_' + str(number_of_iterations) + '.pickle'
+        # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
+        #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
+        results_pickle_file_name = 'Pickle ' \
+                                   'Files/QuenchedMidBiasSimulationResults_Simulated_Cubes_Scale_' \
+                                   + str(tilescale) + '_iterations_' + str(number_of_iterations) \
+                                   + '.pickle'
         with open(results_pickle_file_name, 'wb') as handle:
             pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations,
                          bias_values], handle,
