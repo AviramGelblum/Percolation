@@ -41,9 +41,10 @@ class PolygonSet:
                     return True
         return False
 
-    def random_squares(self, num, size):
+    def random_squares(self, num, size, xy_lim):
         while len(self.polys) < num:
-            self.add(Polygon.square(P(misc.rand(), misc.rand()), size, misc.rand() * np.pi / 2))
+            self.add(Polygon.square(P(misc.rand()*xy_lim[0], misc.rand()*xy_lim[1]), size,
+                                    misc.rand() * np.pi / 2))
 
     def contains(self, p):
         return any(poly.contains(p) for poly in self.polys)

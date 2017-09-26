@@ -435,11 +435,11 @@ class SimulationResults:
         if self.video_number:
             return SimulationResults(self.path[key], self.length_results[key],
                                      self.time_results[key], self.final_out[key], self.scale[key],
-                                     self.number_of_cubes[key], self.video_number[key])
+                                     self.number_of_cubes[key], video_number=self.video_number[key])
         else:
             return SimulationResults(self.path[key], self.length_results[key],
                                      self.time_results[key], self.final_out[key], self.scale[key],
-                                     self.number_of_cubes[key], self.seed[key])
+                                     self.number_of_cubes[key], seed=self.seed[key])
     @staticmethod
     def plot_means_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
                             num_of_cubes, save=False, save_location=None):
@@ -559,6 +559,7 @@ class SimulationResults:
         zmesh = np.empty(xmesh.shape)
 
         for i in range(0, xmesh.shape[0]):
+            print(i)
             for j in range(0, xmesh.shape[1]):
                 gr_generator = (k[0] for k in enumerate(tiled_grid) if
                                 k[1][0] == P(xmesh[i, j], ymesh[i, j]))

@@ -81,15 +81,16 @@ class Configuration:
             self.stone_size = self.stones.polys[-1].segments[0].length()
             self.cheerio_radius = self.stone_size / 0.7
         else:
-            real_boardy = 68  # Yoav used 64 for some reason
-            real_boardx = 48
-            self.cheerio_radius = 1 / real_boardy
+            real_boardx = 68  # Yoav used 64 for some reason
+            real_boardy = 48
+            self.cheerio_radius = 1 / real_boardx
             self.stone_size = self.cheerio_radius * 0.7
 
         # Randomized cube maze generation
         if not file_name:
             self.seed = misc.init_rand(seed)
-            self.stones.random_squares(num_stones, self.stone_size)
+            self.stones.random_squares(num_stones, self.stone_size, (1, real_boardy/real_boardx))
+            self.y_range[1] = real_boardy/real_boardx
 
         # Fictitious initial path for nest direction and starting point - (0,midy) to (1,midy)
         if not self.path:
