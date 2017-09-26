@@ -3,9 +3,9 @@ from BoxesSimulation import SimulationResults  # for pickle import
 import configuration
 
 if __name__ == "__main__":
-    # which = 'sim_example'
+    which = 'sim_example'
     # which = 'sums_vs_scale'
-    which = 'boxplot'
+    # which = 'boxplot'
     scale_list = [1, 2, 4, 6, 8, 10, 15]
     # number_of_iterations = 50
     number_of_iterations = 75
@@ -31,7 +31,7 @@ if __name__ == "__main__":
             tilescale) + '_iteration_' + str(iteration+1)
         if maze_base:
             resobj.draw_simulation_run(configuration.Configuration(
-                seed=resobj.seed[0], num_stones=resobj.seed[0], border=False),
+                seed=resobj.seed[0], num_stones=resobj.number_of_cubes[0], border=False),
                                        save=True, save_location=save_location)
         else:
             resobj.draw_simulation_run(configuration.Configuration(
