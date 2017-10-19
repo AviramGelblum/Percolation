@@ -96,6 +96,7 @@ class PolygonSet:
                 if bigger_box.contains(p):
                     my_polys.add(s, allow_intersecting=True)  # Add all cubes which have any
                     # intersection with the load inside the box
+                    break
         # Simulate random points within the box to estimate the density
         times = 2000
         bad = 0
