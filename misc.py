@@ -117,6 +117,14 @@ def file_names_by_density(density):
         yield i
 
 
+def seed_from_txt_files(num_cubes):
+    for file_name in os.listdir(os.getcwd() + "/Tiled Grids"):
+            if file_name[0:4] == "seed" and file_name[-10:-7] == str(num_cubes) \
+               and file_name[-22] == '1':
+                sec_us_index = file_name[5:].index('_')+5
+                yield file_name[5:sec_us_index]
+
+
 def add_at_fractional_index(a, index, value):
     index1 = int(index)
     index2 = index1 + 1
