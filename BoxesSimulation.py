@@ -183,8 +183,8 @@ class GridSimulation:
 class TiledGridSimulation(GridSimulation):
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
                  num_stones=None, tile_scale=1, max_steps=10000):
-        super().__init__(pickle_density_motion_file_name, video_number, seed, num_stones,
-                         tile_scale, max_steps)
+        super(TiledGridSimulation, self).__init__(pickle_density_motion_file_name, video_number,
+                                                  seed, num_stones, tile_scale, max_steps)
 
     def step(self):
         current_density = next(point[1] for point in self.TiledGrid
@@ -209,11 +209,11 @@ class TiledGridSimulation(GridSimulation):
 
 class QuenchedGridSimulation(GridSimulation):
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
-                 num_stones=None,  tile_scale=1, max_steps=10000):
+                 num_stones=None,  tile_scale=1, max_steps=10000, fix_back_forward=True):
         super().__init__(pickle_density_motion_file_name, video_number, seed, num_stones,
                          tile_scale, max_steps)
         self.QuenchedGrid = self.quench_grid()
-        self.fix_quenched_grid()
+        self.fix_quenched_grid(fix_back_forward)
 
     def quench_grid(self):
         def set_tile_direction(tile_density):
@@ -226,18 +226,13 @@ class QuenchedGridSimulation(GridSimulation):
                                for i in range(len(self.TiledGrid))]
         return quenched_tiled_grid
 
-
     @staticmethod
     def quenched_setup(direction, relevant_distribution_results):
                 time_result, length_result = GridSimulation.draw_from_distribution_results(
                                              direction, relevant_distribution_results)
                 return direction, time_result, length_result
 
-    def fix_quenched_grid(self):
-        def find_prior_x_tile(tile, other_tile):
-            return math.isclose(tile[1] - other_tile[0].x, self.tile_size / 2) and \
-                   math.isclose(tile[2], other_tile[0].y)
-
+    def fix_quenched_grid(self, back_forward_loop=True):
         tiles_to_check = [(tile[0], tile[1][0].x, tile[1][0].y, tile[1][1]) for tile in
                           enumerate(self.QuenchedGrid) if tile[1][2] == 'Back']
         if tiles_to_check:
@@ -247,14 +242,8 @@ class QuenchedGridSimulation(GridSimulation):
                 if math.isclose(tile[1], 0):
                     fix_it = True
 
-                if not fix_it:
-                    prior_x_tile_generator = (other_tile for other_tile in self.QuenchedGrid
-                                              if find_prior_x_tile(tile, other_tile))
-                    try:
-                        prior_tile = next(prior_x_tile_generator)
-                        fix_it = prior_tile[2] == 'Front'
-                    except StopIteration:
-                        raise ValueError('Found x<0 as prior tile!')
+                if back_forward_loop:
+                    fix_it = self.fix_back_forward_loop(fix_it, tile)
 
                 if fix_it:
                     relevant_distribution_results = \
@@ -272,6 +261,21 @@ class QuenchedGridSimulation(GridSimulation):
                     self.QuenchedGrid[tile[0]] = self.QuenchedGrid[tile[0]][:2] + \
                         (direction_to, time_result, length_result)
 
+    def fix_back_forward_loop(self, fix_it, tile):
+        def find_prior_x_tile(tile, other_tile):
+            return math.isclose(tile[1] - other_tile[0].x, self.tile_size / 2) and \
+                   math.isclose(tile[2], other_tile[0].y)
+
+        if not fix_it:
+            prior_x_tile_generator = (other_tile for other_tile in self.QuenchedGrid
+                                      if find_prior_x_tile(tile, other_tile))
+            try:
+                prior_tile = next(prior_x_tile_generator)
+                fix_it = prior_tile[2] == 'Front'
+            except StopIteration:
+                raise ValueError('Found x<0 as prior tile!')
+        return fix_it
+
     def step(self):
         current_direction, time_result,\
             length_result = next(point[2:] for point in self.QuenchedGrid
@@ -287,13 +291,14 @@ class QuenchedGridSimulation(GridSimulation):
 
 ############ Quenched Simulation with mid-trail bias #######
 
+
 class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
 
     def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
                  trail_bias_file_name=None, video_number=None, seed=None, num_stones=None,
-                 tile_scale=1, max_steps=10000):
+                 tile_scale=1, max_steps=10000, fix_back_forward=True):
         super(QuenchedGridTrailBiasSimulation, self).__init__(pickle_density_motion_file_name,
-              video_number, seed, num_stones, tile_scale, max_steps)
+              video_number, seed, num_stones, tile_scale, max_steps, fix_back_forward)
         self.bias_values = bias_values  # tuple(bias_type, max_probability (constant bias), dist,
         # added_probability) where for bias_type 'hooke', for a given distance from trail center (
         # dist, in cm) we add added_probability to the bias towards the trail. Calculated using
@@ -354,6 +359,36 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
         else:
             raise ValueError('bias type must take one of the following values: \n constant, '
                              'hooke, data.')
+
+############ Quenched Simulation with mid-trail bias, and allowing Front <-> Back loops to
+# terminate simulation #######
+
+
+class QuenchedGridTrailBiasSimulationCanBeStuck(QuenchedGridTrailBiasSimulation):
+    def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
+                 trail_bias_file_name=None, video_number=None, seed=None, num_stones=None,
+                 tile_scale=1, max_steps=10000):
+        QuenchedGridTrailBiasSimulation.__init__(self, pickle_density_motion_file_name, bias_values,
+                                                 trail_bias_file_name, video_number, seed,
+                                                 num_stones, tile_scale, max_steps,
+                                                 fix_back_forward=False)
+        self.done = False
+
+    def move(self, direction):
+        if direction == 'Back':
+            p_next = self.path[-1] - P(0.5 * self.tile_size, 0)
+            next_direction = next(point[2] for point in self.QuenchedGrid
+                                  if point[0] == p_next-P(0.5*self.tile_size, 0.5 * self.tile_size))
+            if next_direction == 'Front':
+                self.done = True
+        return QuenchedGridTrailBiasSimulation.move(self, direction)
+
+    def is_done(self, current_step):
+        done, final_out = super().is_done(current_step)
+        if not done:
+            if self.done:
+                return True, 'Stuck'
+        return done, final_out
 
 
 ############# Simulation Results Class ###################
@@ -422,7 +457,6 @@ class SimulationResults:
                              for i in range(num_of_runs)])))/num_of_runs
         return fraction_front, mean_total_length, mean_total_time, \
             median_total_length, median_total_time
-
 
     def __len__(self):
         return len(self.scale)
@@ -565,143 +599,17 @@ class SimulationResults:
                                 k[1][0] == P(xmesh[i, j], ymesh[i, j]))
                 zmesh[i, j] = tiled_grid[next(gr_generator)][1]
 
+        if not len(x_unique) % 2:
+            val = 2 * xmesh[1, -1] - xmesh[1, -2]
+            xmesh = np.hstack((xmesh, [[val] for i in range(xmesh.shape[0])]))
+            ymesh = np.hstack((ymesh, [[ymesh[i, 1]] for i in range(xmesh.shape[0])]))
+            zmesh = np.hstack((zmesh, [[0] for i in range(xmesh.shape[0])]))
+        if not len(y_unique) % 2:
+            val = 2 * ymesh[-1, 1] - ymesh[-2, 1]
+            ymesh = np.vstack((ymesh, [val for i in range(xmesh.shape[1])]))
+            xmesh = np.vstack((xmesh, [xmesh[-1]]))
+            zmesh = np.vstack((zmesh, [0 for i in range(xmesh.shape[1])]))
+
         pcm = drawing_obj.ax.pcolormesh(xmesh, ymesh, zmesh, **{'cmap': grid_dict['cmap'], 'alpha':
                                         grid_dict['cmap_alpha']})
         drawing_obj.fig.colorbar(pcm)
-
-
-######### main ####################
-
-
-############## cube mazes from data #############
-
-if 0:  # __name__ == "__main__":
-
-    scale_list = [1, 2, 4, 6, 8, 10, 15]
-    number_of_iterations = 50
-    loadloc = 'middle'
-    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
-    # results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
-    #     number_of_iterations)+'iterations'
-    # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
-    #     number_of_iterations)+'iterations'
-    cube_densities = [100, 200, 225, 250, 275, 300]
-    # bias_values = ('constant', 0.75)
-    bias_values = ('hooke', 0.8, 10, 0.3)
-    for tilescale in scale_list:
-        for cube_density in cube_densities:
-            for video_number in misc.file_names_by_density(cube_density):
-                print('scale = ' + str(tilescale))
-                print(video_number)
-                for iteration in range(1, number_of_iterations+1):
-                    print(iteration)
-                    # sim = TiledGridSimulation(pickle_file_name, video_number=video_number,
-                    #                           tile_scale=tilescale)
-                    # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
-                    #                              tile_scale=tilescale)
-                    sim = QuenchedGridTrailBiasSimulation(pickle_file_name, bias_values,
-                                                          video_number=video_number,
-                                                          tile_scale=tilescale)
-
-                    load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
-                    try:
-                        ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
-                                                               load_time, where_out, tilescale,
-                                                               cube_density,
-                                                               video_number=video_number))
-                    except NameError as e:
-                        if e.args[0][6:19] == 'ResultsObject':
-                            ResultsObject = SimulationResults(load_path, load_trajectory_length,
-                                                              load_time, where_out, tilescale,
-                                                              cube_density,
-                                                              video_number=video_number)
-                        else:
-                            raise
-                    except AttributeError:
-                        ResultsObject = SimulationResults(load_path, load_trajectory_length,
-                                                          load_time, where_out, tilescale,
-                                                          cube_density, video_number)
-        # results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
-        #                            '_iterations_' + str(number_of_iterations) + '.pickle'
-        # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
-        #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
-        results_pickle_file_name = 'Pickle Files/QuenchedMidBiasSimulationResults_Scale_' + str(
-            tilescale) + '_iterations_' + str(number_of_iterations) + '.pickle'
-        with open(results_pickle_file_name, 'wb') as handle:
-            pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations,
-                         bias_values], handle,
-                        protocol=pickle.HIGHEST_PROTOCOL)
-        ResultsObject = None
-
-##################### simulated cubes ############
-
-if __name__ == "__main__":
-    scale_list = [1, 2, 4, 6, 8, 10, 15]
-    number_of_iterations = 75
-    loadloc = 'middle'
-    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
-    # results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
-    #     number_of_iterations)+'iterations'
-    # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
-    #     number_of_iterations)+'iterations'
-    cube_densities = [100, 150, 200, 225, 250, 275, 300, 400]
-    number_of_mazes_per_density = 30
-    # bias_values = ('constant', 0.75)
-    bias_values = ('hooke', 0.8, 10, 0.3)
-    seed_lists = [[seed for seed in misc.yield_rand(number_of_mazes_per_density)] for i in range(
-                 len(cube_densities))]
-    for tilescale in scale_list:
-        for cube_density, seed_list in zip(cube_densities, seed_lists):
-            for seed in seed_list:
-                print('scale = ' + str(tilescale))
-                print('seed = ' + str(seed))
-                for iteration in range(1, number_of_iterations+1):
-                    print(iteration)
-                    # sim = TiledGridSimulation(pickle_file_name, video_number=video_number,
-                    #                           tile_scale=tilescale)
-                    # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
-                    #                              tile_scale=tilescale)
-                    sim = QuenchedGridTrailBiasSimulation(pickle_file_name, bias_values,
-                                                          seed=seed, num_stones=cube_density,
-                                                          tile_scale=tilescale)
-
-                    load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
-                    try:
-                        ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
-                                                               load_time, where_out, tilescale,
-                                                               cube_density, seed=seed))
-                    except NameError as e:
-                        if e.args[0][6:19] == 'ResultsObject':
-                            ResultsObject = SimulationResults(load_path, load_trajectory_length,
-                                                              load_time, where_out, tilescale,
-                                                              cube_density, seed=seed)
-                        else:
-                            raise
-                    except AttributeError:
-                        ResultsObject = SimulationResults(load_path, load_trajectory_length,
-                                                          load_time, where_out, tilescale,
-                                                          cube_density, seed=seed)
-        # results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
-        #                            '_iterations_' + str(number_of_iterations) + '.pickle'
-        # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
-        #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
-        results_pickle_file_name = 'Pickle ' \
-                                   'Files/QuenchedMidBiasSimulationResults_Simulated_Cubes_Scale_' \
-                                   + str(tilescale) + '_iterations_' + str(number_of_iterations) \
-                                   + '.pickle'
-        with open(results_pickle_file_name, 'wb') as handle:
-            pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations,
-                         bias_values], handle,
-                        protocol=pickle.HIGHEST_PROTOCOL)
-        ResultsObject = None
-
-# if __name__ == "__main__":
-#     scale_list = [1, 2, 4, 6, 8, 10, 15]
-#     loadloc = 'middle'
-#     pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
-#     cube_densities = [100, 200, 225, 250, 275, 300]
-#     for tilescale in scale_list:
-#         for cube_density in cube_densities:
-#             for video_number in misc.file_names_by_density(cube_density):
-#                     sim = TiledGridSimulation(video_number, pickle_file_name, tile_scale=tilescale)
-# exit(0)

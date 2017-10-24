@@ -1,6 +1,7 @@
 import pickle
 import concurrent.futures
-from BoxesSimulation import SimulationResults, QuenchedGridTrailBiasSimulation
+from BoxesSimulation import SimulationResults, QuenchedGridTrailBiasSimulation, \
+    QuenchedGridTrailBiasSimulationCanBeStuck
 from BoxAnalysis import BoxAnalysis, DistributionResults
 import misc
 
@@ -31,10 +32,9 @@ def sim_func(tilescale):
                 #                           tile_scale=tilescale)
                 # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
                 #                              tile_scale=tilescale)
-                sim = QuenchedGridTrailBiasSimulation(pickle_file_name, bias_values,
+                sim = QuenchedGridTrailBiasSimulationCanBeStuck(pickle_file_name, bias_values,
                                                       seed=int(seed), num_stones=cube_density,
                                                       tile_scale=tilescale)
-
                 load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
                 try:
                     ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
@@ -65,11 +65,14 @@ def sim_func(tilescale):
                     protocol=pickle.HIGHEST_PROTOCOL)
     # ResultsObject = None
 
-def main_func():
-    scale_list = [2, 4, 6, 8, 10, 15]
-    with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
-        executor.map(sim_func, scale_list)
+def main_func(par):
+    if par:
+        scale_list = [2, 4, 6, 8, 10, 15]
+        with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
+            executor.map(sim_func, scale_list)
+    else:
+        sim_func(1)  # for debug purposes
 
 if __name__ == '__main__':
-    main_func()
-
+    main_func(False)
+    #main_func(True)
