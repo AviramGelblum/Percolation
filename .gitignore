@@ -49,5 +49,6 @@ modules.xml
 *.png
 temp.py
 *.pickle
+*.zip
 *.ipr
 save.p
