@@ -11,6 +11,9 @@ class MotionPath:
     def __init__(self, points: List[P]):
         self.points = points
 
+    def __eq__(self, other):
+        return self.points == other.points
+
     def last(self) -> P:
         return self.points[-1]
 
