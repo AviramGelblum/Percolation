@@ -1,9 +1,11 @@
 import pickle
 import concurrent.futures
 from BoxesSimulation import SimulationResults, QuenchedGridTrailBiasSimulation, \
-    QuenchedGridTrailBiasSimulationCanBeStuck
+    QuenchedGridTrailBiasSimulationLoopStuck, RegularUniformDensitySimulation, \
+    QuenchedGridSimulation, QuenchedUniformDensitySimulation
 from BoxAnalysis import BoxAnalysis, DistributionResults
 import misc
+import numpy as np
 
 
 def sim_func(tilescale):
@@ -21,20 +23,21 @@ def sim_func(tilescale):
     # seed_lists = [[seed for seed in misc.yield_rand(number_of_mazes_per_density)] for i in range(
     #              len(cube_densities))]
     for cube_density in cube_densities:
-        for seed in misc.seed_from_txt_files(cube_density):
+        # for seed in misc.seed_from_txt_files(cube_density):
+        for video_number in misc.file_names_by_density(cube_density):
             # print('scale = ' + str(tilescale))
             # print('seed = ' + str(seed))
             for iteration in range(1, number_of_iterations+1):
-                print('scale = ' + str(tilescale) + ',seed = ' + seed + ',iter = '
-                      + str(iteration))
-                # print(iteration)
+                #print('scale = ' + str(tilescale) + ',seed = ' + seed + ',iter = '
+                #      + str(iteration))
+                print(iteration)
                 # sim = TiledGridSimulation(pickle_file_name, video_number=video_number,
                 #                           tile_scale=tilescale)
-                # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
-                #                              tile_scale=tilescale)
-                sim = QuenchedGridTrailBiasSimulationCanBeStuck(pickle_file_name, bias_values,
-                                                      seed=int(seed), num_stones=cube_density,
-                                                      tile_scale=tilescale)
+                sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
+                                              tile_scale=tilescale)
+                   #sim = QuenchedGridTrailBiasSimulationLoopStuck(pickle_file_name, bias_values,
+                   #                                     seed=int(seed), num_stones=cube_density,
+                   #                                    tile_scale=tilescale)
                 load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
                 try:
                     ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
@@ -65,13 +68,60 @@ def sim_func(tilescale):
                     protocol=pickle.HIGHEST_PROTOCOL)
     # ResultsObject = None
 
+
+def sim_func_uniform(tilescale):
+    number_of_iterations = 75
+    loadloc = 'middle'
+    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
+    box_densities = np.arange(0, 1, 0.1)
+    seed = None
+    for box_density in box_densities:
+        for iteration in range(1, number_of_iterations+1):
+            seed = misc.init_rand()
+            print('scale = ' + str(tilescale) + ',density = ' + str(box_density) + ',iter = '
+                  + str(iteration))
+            sim = QuenchedUniformDensitySimulation(pickle_file_name, box_density, seed=seed,
+                                                  tile_scale=tilescale)
+            load_path, load_trajectory_length, load_time, where_out = sim.run_simulation()
+            try:
+                ResultsObject.append(SimulationResults(load_path, load_trajectory_length,
+                                                       load_time, where_out, tilescale, 0,
+                                                       seed=seed, box_density=box_density))
+            except NameError as e:
+                if e.args[0][16:29] == 'ResultsObject':
+                    ResultsObject = SimulationResults(load_path, load_trajectory_length,
+                                                      load_time, where_out, tilescale, 0, seed=seed,
+                                                      box_density=box_density)
+
+                else:
+                    raise
+            except AttributeError:
+                ResultsObject = SimulationResults(load_path, load_trajectory_length,
+                                                  load_time, where_out, tilescale, 0, seed=1,
+                                                  box_density=box_density)
+
+    # results_pickle_file_name = 'Pickle Files/SimulationResults_Scale_' + str(tilescale) + \
+    #                            '_iterations_' + str(number_of_iterations) + '.pickle'
+    # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
+    #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
+    results_pickle_file_name = 'Pickle ' \
+                               'Files/QuenchedUniformSimulationResults_Scale_' \
+                               + str(tilescale) + '_iterations_' + str(number_of_iterations) \
+                               + '.pickle'
+    with open(results_pickle_file_name, 'wb') as handle:
+        pickle.dump([ResultsObject, tilescale, box_densities, number_of_iterations], handle,
+                    protocol=pickle.HIGHEST_PROTOCOL)
+    # ResultsObject = None
+
+
 def main_func(par):
     if par:
-        scale_list = [2, 4, 6, 8, 10, 15]
+        scale_list = [1, 2, 4, 6, 8, 10, 15]
         with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
-            executor.map(sim_func, scale_list)
+            executor.map(sim_func_uniform, scale_list)
     else:
-        sim_func(1)  # for debug purposes
+        # sim_func(1)  # for debug purposes
+        sim_func(1)
 
 if __name__ == '__main__':
     main_func(False)
