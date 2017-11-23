@@ -160,11 +160,12 @@ class Configuration:
                     'ShadeAlpha']})
         # Draw cubes
         for stone in self.stones:
-            stone.draw(ax, **{'color': colordict['CubeColor'],'alpha': colordict[
+            stone.draw(ax, **{'color': colordict['CubeColor'], 'alpha': colordict[
                     'CubeAlpha']})
         # Draw experimental load trajectory if one exists for the current run
         if self.path:
-            self.path.draw(ax, {'color': colordict['PathColor'], 'alpha': colordict['PathAlpha']})
+            if len(self.path.points) > 2:
+                self.path.draw(ax, {'color': colordict['PathColor'], 'alpha': colordict['PathAlpha']})
         ax.text(self.y_range[0] - 0.02, self.y_range[1] + 0.02, str(self))  # Add number of
         # video, seed and number of stones as text
         return []
