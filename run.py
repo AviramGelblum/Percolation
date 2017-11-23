@@ -45,15 +45,19 @@ class SimulationError(Exception):
 
 class AntRunner(Runner):
     """Subclass used for creating a partial trajectory from the load trajectory data."""
-    def __init__(self, cfg: Configuration, index=0):
+    def __init__(self, cfg: Configuration, index=0, given_path=None):
         super().__init__(cfg)
         self.index = index  # Defined initial point in trajectory
+        if given_path:
+            self.path_points = given_path
+        else:
+            self.path_points = self.cfg.path.points
 
     def step(self):
         """Get next load location"""
-        cheerio = self.cfg.path.points[self.index]  # Return current load location. cheerio - tuple
+        cheerio = self.path_points[self.index]  # Return current load location. cheerio - tuple
         self.index += 1
-        if self.index >= len(self.cfg.path.points):  # finished trajectory or not
+        if self.index >= len(self.path_points):  # finished trajectory or not
             return cheerio, True
         else:
             return cheerio, False
@@ -145,9 +149,7 @@ class DeterministicRunner(Runner):
         return self.cheerio, False  # second argument is used to determine whether the simulation is
         # finished
 
-
-#####################################################################
-
+#######################################################################################
 
 class StickyRunner(Runner):
     """
@@ -441,7 +443,7 @@ class Run:
         if containing_box:
             self.containing_box = containing_box
         else:
-            self.containing_box = Rectangle(0, 0, 1, 1)
+            self.containing_box = Rectangle(0, self.cfg.y_range[0], 1, self.cfg.y_range[1])
 
     def is_done(self, p, only_x):
         """
@@ -479,13 +481,15 @@ class Run:
                 # real data is true when the loaded trajectory data is finished)
                 path.append(cheerio)
                 self.steps += 1
-                if self.containing_box == Rectangle(0, 0, 1, 1):
+                if self.containing_box == Rectangle(0, self.cfg.y_range[0], 1, self.cfg.y_range[1]):
                     if self.is_done(cheerio, True):
                         # simulation/analysis exceeded max time steps allowed or crossed the right
                         # side of the containing_box (in x).
                         if self.max_steps is not None:
                             if self.steps >= self.max_steps:
                                 print("Timeout")
+                                return path, False
+                        return path, True
                     if res or not self.is_inside_y(cheerio):
                         # analysis exceeded the number of time steps within the actual data or
                         # simulation/analysis crossed the y-boundaries of the containing_box.
@@ -509,9 +513,8 @@ class Run:
             print("Happened!!!")
             # if 'path' not in locals():
             #     path = []
-            return path, True
+            return path, False
             # return self.run()
-
 
     def did_it_pass_through(self, path):
         for p in path:

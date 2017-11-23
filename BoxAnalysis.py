@@ -10,7 +10,8 @@ import math
 
 class BoxAnalysis:
 
-    def __init__(self, scale, cfg: configuration.Configuration, load_center_loc='middle'):
+    def __init__(self, scale, cfg: configuration.Configuration, load_center_loc='middle',
+                 given_path=None):
         if load_center_loc == 'middle' or load_center_loc == 'left':
             self._load_center_loc = load_center_loc
         else:
@@ -18,7 +19,10 @@ class BoxAnalysis:
                              'left')
         self.cfg = cfg
         self.size = scale * self.cfg.cheerio_radius
-        self.path = self.cfg.path.points
+        if given_path:
+            self.path = given_path
+        else:
+            self.path = self.cfg.path.points
         self.path_length = len(self.path)
         self.AnalysisResult = []
 
@@ -41,7 +45,8 @@ class BoxAnalysis:
         while self.index_condition_entire(index):
             p = self.path[index]
             box = BoxAnalysis.create_box(p, self._load_center_loc, self.size)
-            r, ant_res = run.Run(run.AntRunner(self.cfg, index), containing_box=box).run()
+            r, ant_res = run.Run(run.AntRunner(self.cfg, index, self.path),
+                                 containing_box=box).run()
             r_length = len(r)
             if r[-1].x > box.qx:
                 exit_direction = 'Front'
