@@ -52,7 +52,7 @@ class Movie:
         self.fig.clear()
 
     @staticmethod
-    def animate(to_draw_in_current_frame, movie):
+    def animate(to_draw_in_current_frame, movie, tot_num_frames=None):
         """
         Function input into FuncAnimation in run_animation(). Receives the current drawables - a
         circle representing the load and the color. Returns
@@ -63,13 +63,25 @@ class Movie:
         :return: list of objects drawn
         """
         clear = []
-        for d, colordict in to_draw_in_current_frame:
+        for d, colordict in to_draw_in_current_frame[:1]:
             clear += d.draw(movie.ax, colordict)
+        if tot_num_frames:
+            if to_draw_in_current_frame[1] == tot_num_frames-1:
+                plt.close()
         return clear
 
-    def run_animation(self, to_draw_in_current_frame, time_interval):
+    def run_animation(self, to_draw_in_current_frame, time_interval, repeat=True):
         """Run FuncAnimation function to create animation of the load within the cube maze."""
-        anim = animation.FuncAnimation(self.fig, self.animate, to_draw_in_current_frame,
-                                       fargs=[self], interval=time_interval, blit=True)
+        if repeat:
+            fargs = [self]
+        else:
+            fargs = [self, len(to_draw_in_current_frame)]
+
+        anim = animation.FuncAnimation(self.fig, self.animate,
+                                       to_draw_in_current_frame,
+                                       fargs=fargs,
+                                       repeat=repeat,
+                                       interval=time_interval,blit=True)
+
         # repeat=True
         self.just_draw()  # show plot

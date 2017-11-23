@@ -18,7 +18,7 @@ from plots import Plots
 
 
 def run_movie(cfg: configuration.Configuration, runner: run.Runner, only_plot=False,
-              only_save=False):
+              only_save=False, repeat=True):
     """Create the video."""
     movie = Movie()
     movie.background([(cfg, None)])  # draws the cubes, their shade and the experimental path if
@@ -36,11 +36,14 @@ def run_movie(cfg: configuration.Configuration, runner: run.Runner, only_plot=Fa
             movie.just_draw()  # plotting without saving
     else:
         # Creating a video of the simulated load moving through the cube maze
-        to_draw = []
-        # create list of tuples(Circle,str), one for each frame to be drawn in the animation
-        for cheerio in cheerios:
-            to_draw.append([(circle.Circle(cheerio, cfg.cheerio_radius), {'color': 'green'})])
-        movie.run_animation(to_draw, 0)  # drawing the load
+        # to_draw = []
+        # # create list of tuples(Circle,str), one for each frame to be drawn in the animation
+        # for cheerio in cheerios:
+        #     to_draw.append([(circle.Circle(cheerio, cfg.cheerio_radius), {'color': 'green'})])
+        to_draw = [[(circle.Circle(cheerio[1], cfg.cheerio_radius), {'color': 'green'}),
+                    cheerio[0]] for
+                   cheerio in enumerate(cheerios)]
+        movie.run_animation(to_draw, 0, repeat=repeat)  # drawing the load
 
 
 def run_two(cfg: configuration.Configuration):
@@ -245,78 +248,77 @@ def draw_gap(file_name):
 
 ########################################################################
 
-
-f1 = "1410003"
-f2 = "1380012"
-f3 = "1260001"
-f4 = "1110006"
-f5 = "1110004"
-f10 = "1350003"
-f11 = "1400008"
-
-
-# Difficult f10 f2 f1
-# check_open_directions_for_circle_avoiding_segment()
-# check_problem()
-
-# current_cfg = configuration.Configuration(file_name=f11)
-# current_runner = run.DeterministicRunner(current_cfg)
-# run_movie(current_cfg, current_runner)
-# exit(0)
+if __name__ == '__main__':
+    f1 = "1410003"
+    f2 = "1380012"
+    f3 = "1260001"
+    f4 = "1110006"
+    f5 = "1110004"
+    f10 = "1350003"
+    f11 = "1400008"
 
 
-for file in misc.all_file_names():
-    print(file)
-    current_cfg = configuration.Configuration(file_name=file)
-    current_runner = run.DeterministicRunner(current_cfg)
-    run_movie(current_cfg, current_runner, only_save=True)
+    # Difficult f10 f2 f1
+    # check_open_directions_for_circle_avoiding_segment()
+    # check_problem()
 
-exit(0)
+    # current_cfg = configuration.Configuration(file_name=f11)
+    # current_runner = run.DeterministicRunner(current_cfg)
+    # run_movie(current_cfg, current_runner)
+    # exit(0)
+
+    for file in misc.all_file_names():
+        print(file)
+        current_cfg = configuration.Configuration(file_name=file)
+        current_runner = run.DeterministicRunner(current_cfg)
+        run_movie(current_cfg, current_runner, only_save=True)
+
+    exit(0)
 
 
 
-# for file_name in misc.all_file_names():
-#     current_cfg = configuration.Configuration(file_name=file_name)
-#     boxes(current_cfg, 6, draw=True)
-# exit(0)
+    # for file_name in misc.all_file_names():
+    #     current_cfg = configuration.Configuration(file_name=file_name)
+    #     boxes(current_cfg, 6, draw=True)
+    # exit(0)
 
-# current_cfg = configuration.Configuration(num_stones=200)
+    # current_cfg = configuration.Configuration(num_stones=200)
 
-# size = 10
-# good = np.zeros(size + 1)
-# count = np.zeros(size + 1)
-# for file_name in all_file_names():
-#     current_cfg = configuration.Configuration(file_name=file_name)
-#     for res, fullness in boxes(current_cfg, draw=False):
-#         index = int(fullness * size)
-#         count[index] += 1
-#         if res:
-#             good[index] += 1
-# print(count)
-# hist = good / count
-# print(hist)
-# exit(0)
+    # size = 10
+    # good = np.zeros(size + 1)
+    # count = np.zeros(size + 1)
+    # for file_name in all_file_names():
+    #     current_cfg = configuration.Configuration(file_name=file_name)
+    #     for res, fullness in boxes(current_cfg, draw=False):
+    #         index = int(fullness * size)
+    #         count[index] += 1
+    #         if res:
+    #             good[index] += 1
+    # print(count)
+    # hist = good / count
+    # print(hist)
+    # exit(0)
 
-# run_movie(current_cfg)
-# run_two(current_cfg)
-#
-# for file_name in misc.all_file_names():
-#     current_cfg = configuration.Configuration(file_name=file_name)
-#     experiment(current_cfg, 10, False)
-#     current_cfg.rolling = False
-#     experiment(current_cfg, 10, False)
-# exit(0)
-#
-# for i in range(100, 550, 50):
-#     current_cfg = configuration.Configuration(num_stones=i, rolling=True)
-#     experiment(current_cfg, 25, True)
-#     current_cfg = configuration.Configuration(num_stones=i, rolling=False)
-#     experiment(current_cfg, 25, True)
-#     print()
-# exit(0)
-#
-# file_name = None
-# print(file_name)
-# create_heat_map(10, file_name)
-# read_heat_map(file_name)
+    # run_movie(current_cfg)
+    # run_two(current_cfg)
+    #
+    # for file_name in misc.all_file_names():
+    #     current_cfg = configuration.Configuration(file_name=file_name)
+    #     experiment(current_cfg, 10, False)
+    #     current_cfg.rolling = False
+    #     experiment(current_cfg, 10, False)
+    # exit(0)
+    #
+    # for i in range(100, 550, 50):
+    #     current_cfg = configuration.Configuration(num_stones=i, rolling=True)
+    #     experiment(current_cfg, 25, True)
+    #     current_cfg = configuration.Configuration(num_stones=i, rolling=False)
+    #     experiment(current_cfg, 25, True)
+    #     print()
+    # exit(0)
+    #
+    # file_name = None
+    # print(file_name)
+    # create_heat_map(10, file_name)
+    # read_heat_map(file_name)
 
