@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 
 class GridSimulation:
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
-                 num_stones=None, tile_scale=1, max_steps=10000):
+                 num_stones=None, tile_scale=1, max_steps=10000, create_grid=True,
+                 is_stuckable=False):
         self.video_number = video_number
         self.num_stones = num_stones
 
@@ -23,7 +24,8 @@ class GridSimulation:
         else:
             # no video number specified, cfg uses random seed or given seed if specified
             if num_stones:
-                self.cfg = configuration.Configuration(seed=seed, num_stones=self.num_stones, border=False)
+                self.cfg = configuration.Configuration(seed=seed, num_stones=self.num_stones,
+                                                       border=False)
             else:
                 raise ValueError('number of cubes (num_stones parameter) must be specified')
 
@@ -36,11 +38,20 @@ class GridSimulation:
             distribution_list = pickle.load(handle)
         inds_of_correct_scale = [item[0] for item in enumerate(distribution_list)
                                  if item[1][1].scale == self.scale]
-        self.distribution_list = [distribution_list[i] for i in inds_of_correct_scale]
-        self.TiledGrid, self.actual_x_range, self.actual_y_range, self.path = \
-            self.create_tiled_grid()
+        self.distribution_list = [distribution_list[i][:2] for i in inds_of_correct_scale]
+        if create_grid:
+            self.TiledGrid, self.actual_x_range, self.actual_y_range, self.path = \
+                self.create_tiled_grid()
         self.length_results = []
         self.time_results = []
+        self.isStuckable = is_stuckable
+        self.stuck = False
+        if is_stuckable:
+            try:
+                self.stucking_probabilities = [distribution_list[i][3] for i in inds_of_correct_scale]
+            except IndexError:
+                raise IndexError('stucking_probabilities area not defined in distribution_list!')
+
 
     def create_tiled_grid(self):
         if self.video_number:
@@ -172,14 +183,22 @@ class GridSimulation:
             return True, 'Front'
         elif self.path[-1].y > self.actual_y_range[1] or self.path[-1].y < self.actual_y_range[0]:
             return True, 'Sides'
+        elif self.stuck:
+            return True, 'Stuck'
         return False, 'Continue'
+
+    def is_stuck(self, current_density_ind):
+        if self.isStuckable:
+            drawn = np.random.random()
+            if drawn < self.stucking_probabilities[int(current_density_ind)]:
+                self.stuck = True
+                return True
+        return False
 
 
 ####################### Children Simulation Classes ############################
 
-
 ######### Tiled Grid Simulation ###########
-
 class TiledGridSimulation(GridSimulation):
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
                  num_stones=None, tile_scale=1, max_steps=10000):
@@ -192,7 +211,8 @@ class TiledGridSimulation(GridSimulation):
                                                               0.5*self.tile_size))
         exit_probabilities, relevant_distribution_results = \
             self.compute_exit_probabilities_and_distributions(current_density)
-
+        if super().is_stuck(current_density*10):
+            return
         self.draw_from_exit_and_perform_function(exit_probabilities, 'tiled_motion',
                                                  relevant_distribution_results)
 
@@ -205,8 +225,45 @@ class TiledGridSimulation(GridSimulation):
                 return None
 
 
-######### Quenched Grid Simulation ###########
+######### Regular Uniform Density ########
+class RegularUniformDensitySimulation(TiledGridSimulation):
+    def __init__(self, pickle_density_motion_file_name, uniform_box_density=0.5, tile_scale=1,
+                 seed=10, max_steps=10000):
+        GridSimulation.__init__(self, pickle_density_motion_file_name, seed=seed,
+                                num_stones=1, tile_scale=tile_scale,
+                                max_steps=max_steps, create_grid=False)
+        self.uniform_box_density = uniform_box_density
+        self.TiledGrid, self.actual_x_range, self.actual_y_range, self.path = \
+            self.create_uniform_grid()
+        self.exit_probabilities, self.relevant_distribution_results =\
+            super(RegularUniformDensitySimulation,
+                  self).compute_exit_probabilities_and_distributions(self.uniform_box_density)
 
+    def create_uniform_grid(self):
+        xbox_starts = np.arange(0, 1, self.tile_size / 2)[:-2]
+        ybox_starts = np.arange(self.cfg.y_range[0], self.cfg.y_range[1], self.tile_size / 2)[:-2]
+        actual_x_range = (0.5 * self.tile_size, xbox_starts[-1] + 0.5 * self.tile_size)
+        actual_y_range = (ybox_starts[0] + 0.5 * self.tile_size,
+                          ybox_starts[-1] + 0.5 * self.tile_size)
+
+        index_min_x = np.argmin([abs(self.cfg.path.points[0].x - num) for num in
+                                 xbox_starts])
+        index_min_y = np.argmin([abs(self.cfg.path.points[0].y - num) for num in
+                                 ybox_starts])
+
+        path_out = [P(xbox_starts[max([index_min_x, 1])], ybox_starts[max([index_min_y, 1])])]
+        point_list = [P(i, j) for i in xbox_starts for j in ybox_starts]
+        tiled_grid = [(p, self.uniform_box_density) for p in point_list]
+        return tiled_grid, actual_x_range, actual_y_range, path_out
+
+    def step(self):
+        if super().is_stuck(self.uniform_box_density*10):
+            return
+        self.draw_from_exit_and_perform_function(self.exit_probabilities, 'tiled_motion',
+                                                 self.relevant_distribution_results)
+
+
+######### Quenched Grid Simulation ###########
 class QuenchedGridSimulation(GridSimulation):
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
                  num_stones=None,  tile_scale=1, max_steps=10000, fix_back_forward=True):
@@ -216,15 +273,15 @@ class QuenchedGridSimulation(GridSimulation):
         self.fix_quenched_grid(fix_back_forward)
 
     def quench_grid(self):
-        def set_tile_direction(tile_density):
-            exit_probabilities, relevant_distribution_results = \
-                self.compute_exit_probabilities_and_distributions(tile_density)
-            return self.draw_from_exit_and_perform_function(exit_probabilities, 'quenched_setup',
-                                                            relevant_distribution_results)
-
-        quenched_tiled_grid = [self.TiledGrid[i] + set_tile_direction(self.TiledGrid[i][1])
+        quenched_tiled_grid = [self.TiledGrid[i] + self.set_tile_direction(self.TiledGrid[i][1])
                                for i in range(len(self.TiledGrid))]
         return quenched_tiled_grid
+
+    def set_tile_direction(self, tile_density):
+        exit_probabilities, relevant_distribution_results = \
+            self.compute_exit_probabilities_and_distributions(tile_density)
+        return self.draw_from_exit_and_perform_function(exit_probabilities, 'quenched_setup',
+                                                        relevant_distribution_results)
 
     @staticmethod
     def quenched_setup(direction, relevant_distribution_results):
@@ -277,10 +334,12 @@ class QuenchedGridSimulation(GridSimulation):
         return fix_it
 
     def step(self):
-        current_direction, time_result,\
-            length_result = next(point[2:] for point in self.QuenchedGrid
+        current_density, current_direction, time_result,\
+            length_result = next(point[1:] for point in self.QuenchedGrid
                                  if point[0] == self.path[-1]-P(0.5*self.tile_size,
                                                                 0.5*self.tile_size))
+        if super().is_stuck(current_density):
+            return
 
         if self.move(current_direction):
             self.time_results.append(time_result)
@@ -289,9 +348,23 @@ class QuenchedGridSimulation(GridSimulation):
             raise ValueError('Backwards motion assigned to x=0 tile.')
 
 
+######### Quenched Uniform Density ########
+class QuenchedUniformDensitySimulation(QuenchedGridSimulation, RegularUniformDensitySimulation):
+    def __init__(self, pickle_density_motion_file_name, uniform_box_density=0.5, tile_scale=1,
+                 seed=10, max_steps=10000, fix_back_forward=True):
+        RegularUniformDensitySimulation.__init__(self, pickle_density_motion_file_name,
+                                                 uniform_box_density, tile_scale, seed, max_steps)
+        self.QuenchedGrid = self.quench_grid()
+        self.fix_quenched_grid(fix_back_forward)
+
+    def set_tile_direction(self, tile_density):
+        return self.draw_from_exit_and_perform_function(self.exit_probabilities, 'quenched_setup',
+                                                        self.relevant_distribution_results)
+
+    def step(self):
+        QuenchedGridSimulation.step(self)
+
 ############ Quenched Simulation with mid-trail bias #######
-
-
 class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
 
     def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
@@ -360,11 +433,10 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
             raise ValueError('bias type must take one of the following values: \n constant, '
                              'hooke, data.')
 
+
 ############ Quenched Simulation with mid-trail bias, and allowing Front <-> Back loops to
 # terminate simulation #######
-
-
-class QuenchedGridTrailBiasSimulationCanBeStuck(QuenchedGridTrailBiasSimulation):
+class QuenchedGridTrailBiasSimulationLoopStuck(QuenchedGridTrailBiasSimulation):
     def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
                  trail_bias_file_name=None, video_number=None, seed=None, num_stones=None,
                  tile_scale=1, max_steps=10000):
@@ -372,7 +444,6 @@ class QuenchedGridTrailBiasSimulationCanBeStuck(QuenchedGridTrailBiasSimulation)
                                                  trail_bias_file_name, video_number, seed,
                                                  num_stones, tile_scale, max_steps,
                                                  fix_back_forward=False)
-        self.done = False
 
     def move(self, direction):
         if direction == 'Back':
@@ -380,22 +451,14 @@ class QuenchedGridTrailBiasSimulationCanBeStuck(QuenchedGridTrailBiasSimulation)
             next_direction = next(point[2] for point in self.QuenchedGrid
                                   if point[0] == p_next-P(0.5*self.tile_size, 0.5 * self.tile_size))
             if next_direction == 'Front':
-                self.done = True
+                self.stuck = True
         return QuenchedGridTrailBiasSimulation.move(self, direction)
-
-    def is_done(self, current_step):
-        done, final_out = super().is_done(current_step)
-        if not done:
-            if self.done:
-                return True, 'Stuck'
-        return done, final_out
 
 
 ############# Simulation Results Class ###################
-
 class SimulationResults:
     def __init__(self, path, length_results, time_results, final_out, scale, number_of_cubes,
-                 video_number=None, seed=None):
+                 video_number=None, seed=None, box_density=None):
         self.path = [path]
         self.length_results = [length_results]
         self.time_results = [time_results]
@@ -407,6 +470,8 @@ class SimulationResults:
         else:
             self.video_number = None
             self.seed = [seed]
+            if number_of_cubes == 0:
+                self.box_density = [box_density]
 
     def append(self, other):
         self.path.append(other.path[0])
@@ -419,6 +484,8 @@ class SimulationResults:
             self.video_number.append(other.video_number[0])
         else:
             self.seed.append(other.seed[0])
+            if self.number_of_cubes[0] == 0:
+                self.box_density.append(other.box_density[0])
 
     def get_relevant_runs(self, attribute_list=None, attribute_value_list=None):
         if attribute_list.__class__ == list and attribute_value_list.__class__ == list:
@@ -471,9 +538,17 @@ class SimulationResults:
                                      self.time_results[key], self.final_out[key], self.scale[key],
                                      self.number_of_cubes[key], video_number=self.video_number[key])
         else:
-            return SimulationResults(self.path[key], self.length_results[key],
-                                     self.time_results[key], self.final_out[key], self.scale[key],
-                                     self.number_of_cubes[key], seed=self.seed[key])
+            if self.number_of_cubes[0] == 0:
+                return SimulationResults(self.path[key], self.length_results[key],
+                                         self.time_results[key], self.final_out[key],
+                                         self.scale[key], self.number_of_cubes[key],
+                                         seed=self.seed[key], box_density=self.box_density[key])
+            else:
+                return SimulationResults(self.path[key], self.length_results[key],
+                                         self.time_results[key], self.final_out[key],
+                                         self.scale[key], self.number_of_cubes[key],
+                                         seed=self.seed[key])
+
     @staticmethod
     def plot_means_vs_scale(mean_total_lengths, mean_total_times, fractions_front, scale,
                             num_of_cubes, save=False, save_location=None):
@@ -543,9 +618,15 @@ class SimulationResults:
             background_kwargs_dict = {'CubeColor': misc.RGB_255to1((139, 101, 8)), 'PathAlpha':
                                       0.2, 'ShadeAlpha': 0.4, 'CubeAlpha': 0.3}
         drawing_obj = movie.Movie()
-        self.draw(drawing_obj, simulation_kwargs_dict)
+        if self.number_of_cubes[0] == 0:
+            self.draw_only_path(drawing_obj, simulation_kwargs_dict)
+            drawing_obj.ax.set_title('box density = ' + str(self.box_density[0])+', scale = ' +
+                                     str(self.scale[0]))
+        else:
+            self.draw(drawing_obj, simulation_kwargs_dict)
+            drawing_obj.background([(cfg, background_kwargs_dict)])
         drawing_obj.ax.set_ylim(cfg.y_range[0]-0.05, cfg.y_range[1]+0.05)
-        drawing_obj.background([(cfg, background_kwargs_dict)])
+
         if save:
             if save_location is None:
                 raise ValueError('save_location must be provided')
@@ -613,3 +694,16 @@ class SimulationResults:
         pcm = drawing_obj.ax.pcolormesh(xmesh, ymesh, zmesh, **{'cmap': grid_dict['cmap'], 'alpha':
                                         grid_dict['cmap_alpha']})
         drawing_obj.fig.colorbar(pcm)
+
+    def draw_only_path(self, drawing_obj, simulation_kwargs_dict):
+        assert len(self) == 1, 'must be a single simulation object'
+        current_sim = self[0]
+        default_simulation_path_keys = ['PathColor', 'alpha']
+        default_simulation_path_values = ['green', 1]
+        simulation_path_dict = dict(zip(default_simulation_path_keys, default_simulation_path_values))
+        if simulation_kwargs_dict is not None:
+            for key in set(default_simulation_path_keys).intersection(simulation_kwargs_dict.keys()):
+                simulation_path_dict[key] = simulation_kwargs_dict[key]
+        current_path = MotionPath(current_sim.path[0])
+        current_path.draw(drawing_obj.ax, {'color': simulation_path_dict['PathColor'],
+                                           'alpha': simulation_path_dict['alpha']})
