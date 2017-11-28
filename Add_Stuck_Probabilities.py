@@ -24,7 +24,7 @@ def add_stuck_probabilities():
     with open(Yoav_results_filename, 'rb') as handle:
         YoavSimResults_t = pickle.load(handle)
     for scale_size in scale_list:
-        YoavSimResults_timeout = (x for x in enumerate(YoavSimResults_t[3200:3220]) if
+        YoavSimResults_timeout = (x for x in enumerate(YoavSimResults_t) if
                                   x[1].cheerio_path.points and not x[1].result)
         free_densities = []
         stucking_densities = []
@@ -53,9 +53,9 @@ def add_stuck_probabilities():
             stucking_density = current_cfg.stones.box_density(current_cfg.cheerio_radius, box)
             stucking_densities.append(stucking_density)
 
-        edges = np.arange(0, 1.1, 0.1)
-        stuck_hist = np.histogram(np.array(stucking_densities), edges)
-        not_stuck_hist = np.histogram(np.array(free_densities), edges)
+        edges = np.linspace(0, 1, 11)
+        stuck_hist = np.histogram(stucking_densities, edges)
+        not_stuck_hist = np.histogram(free_densities, edges)
 
         with open(distribution_results_filename_root + str(scale_size) + '.pickle', 'rb') as handle:
                 distribution_list = pickle.load(handle)
