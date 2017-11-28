@@ -38,7 +38,7 @@ class GridSimulation:
             distribution_list = pickle.load(handle)
         inds_of_correct_scale = [item[0] for item in enumerate(distribution_list)
                                  if item[1][1].scale == self.scale]
-        self.distribution_list = [distribution_list[i][:2] for i in inds_of_correct_scale]
+        self.distribution_list = [distribution_list[i][:3] for i in inds_of_correct_scale]
         if create_grid:
             self.TiledGrid, self.actual_x_range, self.actual_y_range, self.path = \
                 self.create_tiled_grid()
@@ -201,9 +201,10 @@ class GridSimulation:
 ######### Tiled Grid Simulation ###########
 class TiledGridSimulation(GridSimulation):
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
-                 num_stones=None, tile_scale=1, max_steps=10000):
+                 num_stones=None, tile_scale=1, max_steps=10000, is_stuckable=False):
         super(TiledGridSimulation, self).__init__(pickle_density_motion_file_name, video_number,
-                                                  seed, num_stones, tile_scale, max_steps)
+                                                  seed, num_stones, tile_scale, max_steps,
+                                                  is_stuckable=is_stuckable)
 
     def step(self):
         current_density = next(point[1] for point in self.TiledGrid
@@ -228,10 +229,11 @@ class TiledGridSimulation(GridSimulation):
 ######### Regular Uniform Density ########
 class RegularUniformDensitySimulation(TiledGridSimulation):
     def __init__(self, pickle_density_motion_file_name, uniform_box_density=0.5, tile_scale=1,
-                 seed=10, max_steps=10000):
+                 seed=10, max_steps=10000, is_stuckable=False):
         GridSimulation.__init__(self, pickle_density_motion_file_name, seed=seed,
                                 num_stones=1, tile_scale=tile_scale,
-                                max_steps=max_steps, create_grid=False)
+                                max_steps=max_steps, create_grid=False,
+                                is_stuckable=is_stuckable)
         self.uniform_box_density = uniform_box_density
         self.TiledGrid, self.actual_x_range, self.actual_y_range, self.path = \
             self.create_uniform_grid()
@@ -266,9 +268,10 @@ class RegularUniformDensitySimulation(TiledGridSimulation):
 ######### Quenched Grid Simulation ###########
 class QuenchedGridSimulation(GridSimulation):
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
-                 num_stones=None,  tile_scale=1, max_steps=10000, fix_back_forward=True):
+                 num_stones=None,  tile_scale=1, max_steps=10000, fix_back_forward=True,
+                 is_stuckable=False):
         super().__init__(pickle_density_motion_file_name, video_number, seed, num_stones,
-                         tile_scale, max_steps)
+                         tile_scale, max_steps, is_stuckable=is_stuckable)
         self.QuenchedGrid = self.quench_grid()
         self.fix_quenched_grid(fix_back_forward)
 
@@ -351,9 +354,10 @@ class QuenchedGridSimulation(GridSimulation):
 ######### Quenched Uniform Density ########
 class QuenchedUniformDensitySimulation(QuenchedGridSimulation, RegularUniformDensitySimulation):
     def __init__(self, pickle_density_motion_file_name, uniform_box_density=0.5, tile_scale=1,
-                 seed=10, max_steps=10000, fix_back_forward=True):
+                 seed=10, max_steps=10000, fix_back_forward=True, is_stuckable=False):
         RegularUniformDensitySimulation.__init__(self, pickle_density_motion_file_name,
-                                                 uniform_box_density, tile_scale, seed, max_steps)
+                                                 uniform_box_density, tile_scale, seed, max_steps,
+                                                 is_stuckable=is_stuckable)
         self.QuenchedGrid = self.quench_grid()
         self.fix_quenched_grid(fix_back_forward)
 
@@ -369,9 +373,10 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
 
     def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
                  trail_bias_file_name=None, video_number=None, seed=None, num_stones=None,
-                 tile_scale=1, max_steps=10000, fix_back_forward=True):
+                 tile_scale=1, max_steps=10000, fix_back_forward=True, is_stuckable=False):
         super(QuenchedGridTrailBiasSimulation, self).__init__(pickle_density_motion_file_name,
-              video_number, seed, num_stones, tile_scale, max_steps, fix_back_forward)
+              video_number, seed, num_stones, tile_scale, max_steps, fix_back_forward,
+                                                              is_stuckable=is_stuckable)
         self.bias_values = bias_values  # tuple(bias_type, max_probability (constant bias), dist,
         # added_probability) where for bias_type 'hooke', for a given distance from trail center (
         # dist, in cm) we add added_probability to the bias towards the trail. Calculated using
@@ -439,11 +444,11 @@ class QuenchedGridTrailBiasSimulation(QuenchedGridSimulation):
 class QuenchedGridTrailBiasSimulationLoopStuck(QuenchedGridTrailBiasSimulation):
     def __init__(self, pickle_density_motion_file_name, bias_values=('constant', None),
                  trail_bias_file_name=None, video_number=None, seed=None, num_stones=None,
-                 tile_scale=1, max_steps=10000):
+                 tile_scale=1, max_steps=10000, is_stuckable=True):
         QuenchedGridTrailBiasSimulation.__init__(self, pickle_density_motion_file_name, bias_values,
                                                  trail_bias_file_name, video_number, seed,
                                                  num_stones, tile_scale, max_steps,
-                                                 fix_back_forward=False)
+                                                 fix_back_forward=False, is_stuckable=is_stuckable)
 
     def move(self, direction):
         if direction == 'Back':

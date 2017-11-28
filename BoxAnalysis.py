@@ -35,7 +35,8 @@ class BoxAnalysis:
         """
 
         if self._load_center_loc == 'middle':
-            index = next(point[0] for point in enumerate(self.path) if point[1].x > self.size/2)
+            index = next((point[0] for point in enumerate(self.path) if point[1].x >
+                          self.size/2), 0)
         elif self._load_center_loc == 'left':
             index = 0
         if 'index' not in locals():
@@ -77,11 +78,11 @@ class BoxAnalysis:
 
     def index_condition_entire(self, index):
         if self._load_center_loc == 'left':
-            continue_loop = index < self.path_length and \
+            continue_loop = index < self.path_length-1 and \
                 self.path[index].x < 1 - self.size and \
                 self.size / 2 < self.path[index].y < 1 - self.size / 2
         elif self._load_center_loc == 'middle':
-            continue_loop = index < len(self.path) and \
+            continue_loop = index < self.path_length-1 and \
                 self.size / 2 < self.path[index].x < 1 - self.size / 2 and \
                 self.size / 2 < self.path[index].y < 1 - self.size / 2
         if 'continue_loop' in locals():
