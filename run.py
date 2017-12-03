@@ -425,7 +425,31 @@ class SimulationRunner2(Runner):
 
 
 #####################################################################
+class SimulationRunner3(Runner):
 
+    def __init__(self, cfg: Configuration, seed=None, sigma=0, rolling=True, persistence_dist=6,
+                 max_steps=10000):
+        super().__init__(cfg, max_steps, seed)
+        self.speed = self.cfg.cheerio_radius * 0.05  # step size
+        self.sigma = sigma  # Standard deviation of normal distribution used to draw from a
+        # random direction to update the current target
+        self.rolling = rolling  # enable/disable rolling
+        self.persistence_dist = persistence_dist * cfg.cheerio_radius  # define persistence
+        # length of the load. This parameter determines the time/distance passed before
+        # re-selecting a new target.
+
+        self.dist_on_same_target = 0  # initialize distance counter for target
+        self.cheerio = self.cfg.start  # initialize load location based on real data/(0,mid_y)
+        self.current_target = self.cfg.nest  # initialize nest direction based on real last load
+        # location/(1,mid_y)
+        self.v = P(0, 0)  # initialize velocity di
+
+    def step(self):
+        allowable = self.cfg.stones.open_direction_for_circle(self.cheerio,
+                                                              self.cfg.cheerio_radius,
+                                                              self.speed)
+        if not allowable:
+            raise SimulationError()
 
 class Run:
     """
