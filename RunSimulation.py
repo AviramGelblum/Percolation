@@ -14,7 +14,7 @@ def sim_func(tilescale):
     loadloc = 'middle'
     rolling = True
     sigma = 0.35
-    persistence_distance = 6
+    persistence_distance = 0
     # pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
     distribution_results_filename_root = 'Pickle Files/SimulationBoxDistribution_' + loadloc + \
                                          '_rolling_' + str(rolling) + '_sigma_' + str(
@@ -142,6 +142,6 @@ def sim_func_uniform(tilescale):
 
 if __name__ == '__main__':
     scale_list = [1, 2, 4, 6, 8, 10, 15]
-    parcomp = parallel.ParallelComputing(sim_func, scale_list, 2)
-    #parcomp.run()
-    parcomp.run_not_parallel()
+    parcomp = parallel.ParallelComputing(sim_func, scale_list, 3)
+    parcomp.run()
+    #parcomp.run_not_parallel()
