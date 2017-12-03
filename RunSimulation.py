@@ -7,7 +7,7 @@ from BoxesSimulation import SimulationResults, TiledGridSimulation, \
 from BoxAnalysis import BoxAnalysis, DistributionResults
 import misc
 import numpy as np
-
+import parallel
 
 def sim_func(tilescale):
     number_of_iterations = 50
@@ -131,15 +131,17 @@ def sim_func_uniform(tilescale):
     # ResultsObject = None
 
 
-def main_func(par):
-    if par:
-        scale_list = [1, 2, 4, 6, 8, 10, 15]
-        with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
-            executor.map(sim_func, scale_list)
-    else:
-        # sim_func(1)  # for debug purposes
-        sim_func(2)
+# def main_func(par):
+#     if par:
+#         scale_list = [1, 2, 4, 6, 8, 10, 15]
+#         with concurrent.futures.ProcessPoolExecutor(max_workers=3) as executor:
+#             executor.map(sim_func, scale_list)
+#     else:
+#         # sim_func(1)  # for debug purposes
+#         sim_func(2)
 
 if __name__ == '__main__':
-    main_func(False)
-    #main_func(True)
+    scale_list = [1, 2, 4, 6, 8, 10, 15]
+    parcomp = parallel.ParallelComputing(sim_func, scale_list, 2)
+    #parcomp.run()
+    parcomp.run_not_parallel()
