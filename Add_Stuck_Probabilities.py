@@ -67,7 +67,15 @@ def add_stuck_probabilities():
             finished_free_hist.append(free)
 
         all_not_stuck = not_stuck_hist[0] + finished_free_hist
-        stucking_probabilities = stuck_hist[0]/(all_not_stuck+stuck_hist[0])
+        all_tiles = (all_not_stuck + stuck_hist[0])
+        with np.errstate(invalid='raise', divide='raise'):
+            while True:
+                try:
+                    stucking_probabilities = stuck_hist[0] / all_tiles
+                    break
+                except FloatingPointError:
+                    inds_zero = all_tiles == 0
+                    all_tiles[inds_zero] = 1
 
         # Since I was dumb enough to make distribution_list a list of tuples, they are immutable and
         # need to be reassigned to add the stucking probabilites instead of just appending
