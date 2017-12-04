@@ -192,6 +192,7 @@ class GridSimulation:
             drawn = np.random.random()
             if drawn < self.stucking_probabilities[min(int(current_density_ind), 9)]:
                 self.stuck = True
+                print('stuck!')
                 return True
         return False
 

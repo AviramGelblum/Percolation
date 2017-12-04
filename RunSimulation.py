@@ -9,17 +9,18 @@ import misc
 import numpy as np
 import parallel
 
+
 def sim_func(tilescale):
     number_of_iterations = 50
     loadloc = 'middle'
-    rolling = True
-    sigma = 0.35
-    persistence_distance = 0
-    # pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
-    distribution_results_filename_root = 'Pickle Files/SimulationBoxDistribution_' + loadloc + \
-                                         '_rolling_' + str(rolling) + '_sigma_' + str(
-                                         sigma).replace('.', 'p') + '_PersistenceDistance_' \
-                                         + str(persistence_distance).replace('.', 'p') + '_scale_'
+    # rolling = True
+    # sigma = 0.35
+    # persistence_distance = 6
+    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
+    # distribution_results_filename_root = 'Pickle Files/SimulationBoxDistribution_' + loadloc + \
+    #                                      '_rolling_' + str(rolling) + '_sigma_' + str(
+    #                                      sigma).replace('.', 'p') + '_PersistenceDistance_' \
+    #                                      + str(persistence_distance).replace('.', 'p') + '_scale_'
     # results_pickle_file_name = 'Pickle Files/SimulationResults_' + str(
     #     number_of_iterations)+'iterations'
     # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_' + str(
@@ -40,12 +41,12 @@ def sim_func(tilescale):
                 #      + str(iteration))
                 print('scale = ' + str(tilescale) + ', seed = ' + seed + ', iteration = ' +
                       str(iteration))
-                pickle_file_name = distribution_results_filename_root + str(tilescale) + \
-                                   '_stucking.pickle'
+                # pickle_file_name = distribution_results_filename_root + str(tilescale) + \
+                #                    '_stucking.pickle'
                 # sim = TiledGridSimulation(pickle_file_name, video_number=video_number,
                 #                           tile_scale=tilescale, is_stuckable=True)
                 sim = TiledGridSimulation(pickle_file_name, seed=int(seed), num_stones=cube_density,
-                                          tile_scale=tilescale, is_stuckable=True)
+                                          tile_scale=tilescale, is_stuckable=False)
                 # sim = QuenchedGridSimulation(pickle_file_name, video_number=video_number,
                 #                               tile_scale=tilescale)
                 # sim = QuenchedGridTrailBiasSimulationLoopStuck(pickle_file_name, bias_values,
@@ -75,11 +76,14 @@ def sim_func(tilescale):
     #                            'Files/QuenchedMidBiasSimulationResults_Simulated_Cubes_Scale_' \
     #                            + str(tilescale) + '_iterations_' + str(number_of_iterations) \
     #                            + '.pickle'
-    results_pickle_file_name = 'Pickle Files/YoavBasedTiledSimulationResults_Scale_' \
-                                + str(tilescale) + '_rolling_' + str(rolling) + '_sigma_' \
-                                + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
-                                + str(persistence_distance).replace('.', 'p') + '_iterations_'\
-                                + str(number_of_iterations) + '.pickle'
+    # results_pickle_file_name = 'Pickle Files/YoavBasedTiledSimulationResults_Simulated_Cubes_Scale_' \
+    #                             + str(tilescale) + '_rolling_' + str(rolling) + '_sigma_' \
+    #                             + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
+    #                             + str(persistence_distance).replace('.', 'p') + '_iterations_'\
+    #                             + str(number_of_iterations) + '.pickle'
+    results_pickle_file_name = 'Pickle Files/SimulationResults_Simulated_Cubes_Scale_' \
+                               + str(tilescale) + '_iterations_' + str(number_of_iterations) \
+                               + '.pickle'
     with open(results_pickle_file_name, 'wb') as handle:
         pickle.dump([ResultsObject, tilescale, cube_densities, number_of_iterations], handle,
                     protocol=pickle.HIGHEST_PROTOCOL)
@@ -144,4 +148,4 @@ if __name__ == '__main__':
     scale_list = [1, 2, 4, 6, 8, 10, 15]
     parcomp = parallel.ParallelComputing(sim_func, scale_list, 3)
     parcomp.run()
-    #parcomp.run_not_parallel()
+    #parcomp.run_not_parallel(index=-1)
