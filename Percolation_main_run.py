@@ -48,5 +48,5 @@ if __name__ == '__main__':
     filename = 'YoavSimulationResults_for_box_analysis/aviram_PersistenceDistance_' \
                + str(persistence_distance).replace('.', 'p') + '.pickle'
 
-    # with open(filename, 'wb') as handle:
-    #     pickle.dump(SimResults, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(filename, 'wb') as handle:
+        pickle.dump(SimResults, handle, protocol=pickle.HIGHEST_PROTOCOL)
