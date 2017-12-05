@@ -13,7 +13,7 @@ def add_stuck_probabilities():
     sigma = 0.35
     # max_steps = 5000
     rolling = True
-    persistence_distance = 6
+    persistence_distance = 0
     scale_list = [1, 2, 4, 6, 8, 10, 15]
     Yoav_results_filename = 'YoavSimulationResults_for_box_analysis/rolling_' + str(rolling) + \
                             '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
@@ -25,7 +25,8 @@ def add_stuck_probabilities():
         YoavSimResults_t = pickle.load(handle)
     for scale_size in scale_list:
         YoavSimResults_timeout = (x for x in enumerate(YoavSimResults_t) if
-                                  x[1].cheerio_path.points and not x[1].result)
+                                  x[1].cheerio_path.points and not x[1].result
+                                  and 0 < x[1].cheerio_path.points[-1].y < 48 / 68)
         free_densities = []
         stucking_densities = []
         for sim in YoavSimResults_timeout:

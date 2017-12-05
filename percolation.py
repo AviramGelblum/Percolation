@@ -267,11 +267,12 @@ if __name__ == '__main__':
     # run_movie(current_cfg, current_runner)
     # exit(0)
 
-    for file in misc.all_file_names():
-        print(file)
-        current_cfg = configuration.Configuration(file_name=file)
-        current_runner = run.DeterministicRunner(current_cfg)
-        run_movie(current_cfg, current_runner, only_save=True)
+    # for file in misc.all_file_names():
+    #     print(file)
+    seed = np.random.random_integers(10000000)
+    current_cfg = configuration.Configuration(seed=seed, num_stones=200, border=False)
+    current_runner = run.SimulationRunner3(current_cfg, persistence=3)
+    run_movie(current_cfg, current_runner, only_save=False)
 
     exit(0)
 
