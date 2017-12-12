@@ -79,12 +79,12 @@ class Configuration:
         # general data measurements.
         if self.stones.polys:
             self.stone_size = self.stones.polys[-1].segments[0].length()
-            self.cheerio_radius = self.stone_size / 0.7
+            self.cheerio_radius = self.stone_size / 0.8
         else:
             real_boardx = 68  # Yoav used 64 for some reason
             real_boardy = 48
             self.cheerio_radius = 1 / real_boardx
-            self.stone_size = self.cheerio_radius * 0.7
+            self.stone_size = self.cheerio_radius * 0.8
 
         # Randomized cube maze generation
         if not file_name:
