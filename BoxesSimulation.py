@@ -56,11 +56,11 @@ class GridSimulation:
     def create_tiled_grid(self):
         if self.video_number:
             tilefilename = 'Tiled Grids/' + self.video_number + '_grid_scale_' + str(self.scale) \
-                       + '.pickle'
+                       + ' correct_cube_scaling.pickle'
         else:
             tilefilename = 'Tiled Grids/seed_' + str(self.cfg.seed) + '_grid_scale_' \
                            + str(self.scale) + '_num_cubes_' + str(self.num_stones) \
-                           + '.pickle'
+                           + ' correct_cube_scaling.pickle'
 
         xbox_starts = np.arange(0, 1, self.tile_size/2)[:-2]
         ybox_starts = np.arange(self.cfg.y_range[0], self.cfg.y_range[1], self.tile_size/2)[:-2]
