@@ -6,7 +6,7 @@ from Percolation_main_run import ResultsFromYoavRun
 import math
 import numpy as np
 import parallel
-
+from global_vars import root as root
 
 def add_stuck_probabilities():
     loadloc = 'middle'
@@ -15,12 +15,13 @@ def add_stuck_probabilities():
     rolling = True
     persistence_distance = 0
     scale_list = [1, 2, 4, 6, 8, 10, 15]
-    Yoav_results_filename = 'YoavSimulationResults_for_box_analysis/rolling_' + str(rolling) + \
-                            '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
+    Yoav_results_filename = root + 'YoavSimulationResults_for_box_analysis/rolling_' + str(rolling)\
+                                 + '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
                             + str(persistence_distance).replace('.', 'p') + '.pickle'
-    distribution_results_filename_root = 'Pickle Files/SimulationBoxDistribution_' + loadloc + \
-        '_rolling_' + str(rolling) + '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_'\
-        + str(persistence_distance).replace('.', 'p') + '_scale_'
+    distribution_results_filename_root = root + 'Pickle Files/SimulationBoxDistribution_' + loadloc\
+                                         + '_rolling_' + str(rolling) + '_sigma_' \
+                                         + str(sigma).replace('.', 'p') + '_PersistenceDistance_'\
+                                         + str(persistence_distance).replace('.', 'p') + '_scale_'
     with open(Yoav_results_filename, 'rb') as handle:
         YoavSimResults_t = pickle.load(handle)
     for scale_size in scale_list:

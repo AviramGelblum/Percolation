@@ -4,7 +4,7 @@ import misc
 import configuration
 import run
 import pickle
-
+from global_vars import root as root
 
 class ResultsFromYoavRun:
 
@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
                 # percolation.run_movie(current_cfg, current_runner, repeat=True)
 
-    filename = 'YoavSimulationResults_for_box_analysis/aviram_PersistenceDistance_' \
+    filename = root + 'YoavSimulationResults_for_box_analysis/aviram_PersistenceDistance_' \
                + str(persistence_distance).replace('.', 'p') + '.pickle'
 
     with open(filename, 'wb') as handle:

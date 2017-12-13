@@ -48,6 +48,7 @@ modules.xml
 .idea/inspectionProfiles/Project_Default.xml
 *.png
 temp.py
+temp2.py
 *.pickle
 *.zip
 *.ipr

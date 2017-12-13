@@ -8,11 +8,13 @@ import misc
 import movie
 from path import MotionPath
 import matplotlib.pyplot as plt
+from global_vars import root as root
 
 
 ####################### Base Grid Simulation Class ############################
 
 class GridSimulation:
+
     def __init__(self, pickle_density_motion_file_name, video_number=None, seed=None,
                  num_stones=None, tile_scale=1, max_steps=10000, create_grid=True,
                  is_stuckable=False):
@@ -55,11 +57,11 @@ class GridSimulation:
 
     def create_tiled_grid(self):
         if self.video_number:
-            tilefilename = 'Tiled Grids/' + self.video_number + '_grid_scale_' + str(self.scale) \
-                       + ' correct_cube_scaling.pickle'
+            tilefilename = root + 'Tiled Grids/' + self.video_number + \
+                           '_grid_scale_' + str(self.scale) + ' correct_cube_scaling.pickle'
         else:
-            tilefilename = 'Tiled Grids/seed_' + str(self.cfg.seed) + '_grid_scale_' \
-                           + str(self.scale) + '_num_cubes_' + str(self.num_stones) \
+            tilefilename = root + 'Tiled Grids/seed_' + str(self.cfg.seed) + \
+                           '_grid_scale_' + str(self.scale) + '_num_cubes_' + str(self.num_stones) \
                            + ' correct_cube_scaling.pickle'
 
         xbox_starts = np.arange(0, 1, self.tile_size/2)[:-2]
@@ -663,10 +665,10 @@ class SimulationResults:
         current_path.draw(drawing_obj.ax, {'color': simulation_path_dict['PathColor'],
                                            'alpha': simulation_path_dict['alpha']})
         if self.video_number:
-            tilefilename = 'Tiled Grids/' + self.video_number[0] + '_grid_scale_' + str(self.scale[0]) \
-                           + '.pickle'
+            tilefilename = root + 'Tiled Grids/' + self.video_number[0] + '_grid_scale_' \
+                           + str(self.scale[0]) + '.pickle'
         else:
-            tilefilename = 'Tiled Grids/seed_' + str(self.seed[0]) + '_grid_scale_' \
+            tilefilename = root + 'Tiled Grids/seed_' + str(self.seed[0]) + '_grid_scale_' \
                            + str(self.scale[0]) + '_num_cubes_' + str(self.number_of_cubes[0]) \
                            + '.pickle'
         with open(tilefilename, 'rb') as handle:

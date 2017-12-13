@@ -8,7 +8,7 @@ from BoxAnalysis import BoxAnalysis, DistributionResults
 import misc
 import numpy as np
 import parallel
-
+from global_vars import root as root
 
 def sim_func(tilescale):
     number_of_iterations = 50
@@ -16,7 +16,7 @@ def sim_func(tilescale):
     # rolling = True
     # sigma = 0.35
     # persistence_distance = 6
-    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc \
+    pickle_file_name = root + 'Pickle Files/ExperimentalBoxDistribution' + loadloc \
                        + ' correct cube scaling 0p8' + '.pickle'
     # distribution_results_filename_root = 'Pickle Files/SimulationBoxDistribution_' + loadloc + \
     #                                      '_rolling_' + str(rolling) + '_sigma_' + str(
@@ -95,7 +95,7 @@ def sim_func(tilescale):
     # results_pickle_file_name = 'Pickle Files/SimulationResults_Simulated_Cubes_Scale_' \
     #                            + str(tilescale) + '_iterations_' + str(number_of_iterations) \
     #                            + '.pickle'
-    results_pickle_file_name = 'Pickle Files/SimulationResults_correct_cube_size_Scale_' \
+    results_pickle_file_name = root + 'Pickle Files/SimulationResults_correct_cube_size_Scale_' \
                                + str(tilescale) + '_iterations_' + str(number_of_iterations) \
                                + '.pickle'
     with open(results_pickle_file_name, 'wb') as handle:
@@ -107,7 +107,7 @@ def sim_func(tilescale):
 def sim_func_uniform(tilescale):
     number_of_iterations = 75
     loadloc = 'middle'
-    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
+    pickle_file_name = root + 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
     box_densities = np.arange(0, 1, 0.1)
     seed = None
     for box_density in box_densities:
@@ -139,8 +139,7 @@ def sim_func_uniform(tilescale):
     #                            '_iterations_' + str(number_of_iterations) + '.pickle'
     # results_pickle_file_name = 'Pickle Files/QuenchedSimulationResults_Scale_' + str(tilescale) \
     #                            + '_iterations_' + str(number_of_iterations) + '.pickle'
-    results_pickle_file_name = 'Pickle ' \
-                               'Files/QuenchedUniformSimulationResults_Scale_' \
+    results_pickle_file_name = root + 'Pickle Files/QuenchedUniformSimulationResults_Scale_' \
                                + str(tilescale) + '_iterations_' + str(number_of_iterations) \
                                + '.pickle'
     with open(results_pickle_file_name, 'wb') as handle:

@@ -6,6 +6,7 @@ import numpy as np
 import misc
 import pickle
 import math
+from global_vars import root as root
 
 
 class BoxAnalysis:
@@ -199,7 +200,8 @@ if __name__ == "__main__":
             # run_movie(current_cfg, current_runner, only_save=True)
         distribution_list.extend(BoxAnalysis.compute_statistics(single_scale_analysis_list,
                                                                 scale_size))
-    filename = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + ' correct cube scaling 0p8' + '.pickle'
+    filename = root + 'Pickle Files/ExperimentalBoxDistribution' + loadloc \
+               + ' correct cube scaling 0p8' + '.pickle'
     with open(filename, 'wb') as handle:
         pickle.dump(distribution_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 

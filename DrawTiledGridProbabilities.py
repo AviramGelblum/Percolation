@@ -4,7 +4,7 @@ from BoxAnalysis import BoxAnalysis, DistributionResults
 import matplotlib.pyplot as plt
 import misc
 import configuration
-
+from global_vars import root as root
 
 def create_dicts_template(scale_list, distribution_list, fieldarg, mean_cheerio_size):
     back_dict, front_dict, sides_dict = ({scale: [] for scale in scale_list}
@@ -35,7 +35,8 @@ def create_dicts_template(scale_list, distribution_list, fieldarg, mean_cheerio_
 
 def draw_probabilities_etc_dicts(back_dict, front_dict, sides_dict, string_measure, title):
     density_vals = np.arange(0, 1, 0.1)
-    save_loc = 'Computed Exit Distributions/' + string_measure + '_vs_density_for_constant_scale'
+    save_loc = root + 'Computed Exit Distributions/' + string_measure + \
+               '_vs_density_for_constant_scale'
     for scale, back_vals, front_vals, sides_vals in misc.zipdic(back_dict, front_dict, sides_dict):
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -84,7 +85,7 @@ def calculate_mean_cheerio_size():
 if __name__ == "__main__":
     scale_list = [1, 2, 4, 6, 8, 10, 15]
     loadloc = 'middle'
-    pickle_file_name = 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
+    pickle_file_name = root + 'Pickle Files/ExperimentalBoxDistribution' + loadloc + '.pickle'
     with open(pickle_file_name, 'rb') as handle:
         distribution_list = pickle.load(handle)
     fieldargs = ['exit_probability', 'length_distribution', 'time_distribution']

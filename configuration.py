@@ -5,6 +5,7 @@ from point import P
 from polygon_set import PolygonSet
 from polygon import Polygon
 from circle import Circle
+from global_vars import root as root
 
 class Configuration:
     """
@@ -23,7 +24,6 @@ class Configuration:
         :param num_stones: number of stones to be randomized in case of simulation on a random
         distribution
         """
-
         self.base_dir = base_dir  # root/base_dir - directory name
         self.file_name = file_name  # number of video
 
@@ -37,8 +37,8 @@ class Configuration:
 
         self.path = None  # placeholder for normalized trajectory data
         if self.file_name:  # if there is data (not random cube maze)
-            trajectory_file_name = self.base_dir + "/" + file_name + "_load_trajectory.txt"
-            stones_file_name = self.base_dir + "/" + file_name + ".txt"
+            trajectory_file_name = root + self.base_dir + "/" + file_name + "_load_trajectory.txt"
+            stones_file_name = root + self.base_dir + "/" + file_name + ".txt"
             m = 0.0  # placeholder for max value in x or y
             raw_stone_values = []  # placeholder for extracted cube data
             try:

@@ -2,6 +2,7 @@ from BoxAnalysis import BoxAnalysis as BoxAnalysis
 from Percolation_main_run import ResultsFromYoavRun
 import configuration
 import pickle
+from global_vars import root as root
 
 if __name__ == '__main__':
     #scale_list = [1, 2, 4, 6, 8, 10, 15]
@@ -13,8 +14,8 @@ if __name__ == '__main__':
     max_steps = 5000
     rolling = True
     persistence_distance = 6
-    Yoav_results_filename = 'YoavSimulationResults_for_box_analysis/rolling_' + str(rolling) + \
-                            '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
+    Yoav_results_filename = root + 'YoavSimulationResults_for_box_analysis/rolling_' + str(rolling)\
+                            + '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
                             + str(persistence_distance).replace('.', 'p') + '.pickle'
     with open(Yoav_results_filename, 'rb') as handle:
         YoavSimResults_t = pickle.load(handle)
@@ -36,9 +37,9 @@ if __name__ == '__main__':
             #     break
             # run_movie(current_cfg, current_runner, only_save=True)
         distribution_list = BoxAnalysis.compute_statistics(single_scale_analysis_list, scale_size)
-        filename = 'Pickle Files/SimulationBoxDistribution_' + loadloc + '_rolling_' + str(rolling) + \
-                   '_sigma_' + str(sigma).replace('.', 'p') + '_PersistenceDistance_' \
-                   + str(persistence_distance).replace('.', 'p') + '_scale_' \
-                   + str(scale_size) + '.pickle'
+        filename = root + 'Pickle Files/SimulationBoxDistribution_' + loadloc + '_rolling_'\
+                   + str(rolling) + '_sigma_' + str(sigma).replace('.', 'p') + \
+                   '_PersistenceDistance_' + str(persistence_distance).replace('.', 'p') \
+                   + '_scale_' + str(scale_size) + '.pickle'
         with open(filename, 'wb') as handle:
             pickle.dump(distribution_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
