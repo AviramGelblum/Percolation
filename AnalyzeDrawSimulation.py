@@ -9,10 +9,10 @@ if __name__ == "__main__":
     which = 'sums_vs_scale'
     # which = 'boxplot'
     scale_list = [1, 2, 4, 6, 8, 10, 15]
-    # number_of_iterations = 50
-    number_of_iterations = 75
-    # cube_counts = [100, 200, 225, 250, 275, 300]
-    cube_counts = [100, 150,  200, 225, 250, 275, 300, 400]
+    number_of_iterations = 50
+    # number_of_iterations = 75
+    cube_counts = [100, 200, 225, 250, 275, 300]
+    #cube_counts = [100, 150,  200, 225, 250, 275, 300, 400]
     box_densities = np.arange(0, 1, 0.1)
     maze_base = ''
     # maze_base = '_Simulated_Cubes'
@@ -20,7 +20,8 @@ if __name__ == "__main__":
     # simtype = 'Quenched'
     # simtype = ''
     # simtype = 'QuenchedMidBias'
-    simtype2 = 'RegularUniform'
+    # simtype2 = 'RegularUniform'
+    simtype2 = ''
     simtype = simtype2 + 'SimulationResults'
     if which == 'sim_example':
         iterations = [60+number_of_iterations*x for x in range(len(box_densities))]
@@ -54,8 +55,8 @@ if __name__ == "__main__":
             attribute_list = ['scale', 'box_density']
             for tilescale in scale_list:
                 results_pickle_file_name = root + 'Pickle Files/' + simtype + maze_base + \
-                                           '_Scale_' + str(tilescale) + '_iterations_' \
-                                           + str(number_of_iterations) + '.pickle'
+                                           '_correct_cube_size_Scale_' + str(tilescale) + \
+                                           '_iterations_' + str(number_of_iterations) + '.pickle'
                 with open(results_pickle_file_name, 'rb') as handle:
                     ResultsObject = pickle.load(handle)[0]
                 for box_den in box_densities:
@@ -76,15 +77,15 @@ if __name__ == "__main__":
                                                       fractions_front[box_den],
                                                       scale_list, box_den_str, save=True,
                               save_location=root + 'BoxSimulation Results/' + simtype + maze_base
-                                            + '_stats_vs_scale')
+                                            + '_correct_cube_size_stats_vs_scale')
         else:
             mean_total_lengths, mean_total_times, fractions_front = ({cube: [] for cube in cube_counts}
                                                                      for i in range(3))
             attribute_list = ['scale', 'number_of_cubes']
             for tilescale in scale_list:
                 results_pickle_file_name = root + 'Pickle Files/' + simtype + maze_base + \
-                                           '_Scale_' + str(tilescale) + '_iterations_' \
-                                           + str(number_of_iterations) + '.pickle'
+                                           '_correct_cube_size_Scale_' + str(tilescale) + \
+                                           '_iterations_' + str(number_of_iterations) + '.pickle'
                 with open(results_pickle_file_name, 'rb') as handle:
                     ResultsObject = pickle.load(handle)[0]
                 for cube_count in cube_counts:
@@ -103,7 +104,7 @@ if __name__ == "__main__":
                                                       cube_count], fractions_front[cube_count],
                                                       scale_list, cube_count, save=True,
                     save_location=root + 'BoxSimulation Results/' + simtype + maze_base +
-                                  '_stats_vs_scale')
+                                  '_correct_cube_size_stats_vs_scale')
 
     elif which == 'boxplot':
         relevant_runs_dict = {cube: [] for cube in cube_counts}
