@@ -10,7 +10,7 @@ from typing import List
 from scipy.stats import norm
 import scipy as sc
 import scipy.stats as sct
-
+from global_vars import root as root
 
 def init_rand(seed=None):
     """Return random seed if seed is not defined. Seed the RNG"""
@@ -100,7 +100,7 @@ def yield_rand(n):
 
 
 def all_file_names():
-    for file_name in os.listdir(os.getcwd() + "/data"):
+    for file_name in os.listdir(root + "/data"):
         if file_name[-4:] == ".txt" and len(file_name) == 11:
             yield file_name[:-4]
 
@@ -112,7 +112,7 @@ def file_names_by_density(density):
                         225: ['1400008'],
                         250: ['1380012'],
                         275: ['1410003'],
-                        300: ['1350003']}
+                        300: ['1350001', '1350003', '1350005', '1280014', '1280015']}
     for i in density2filename[density]:
         yield i
 
@@ -134,3 +134,4 @@ def add_at_fractional_index(a, index, value):
         a[index1] += value * weight1
     if weight2:
         a[index2] += value * weight2
+
